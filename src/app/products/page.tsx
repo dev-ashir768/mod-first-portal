@@ -20,7 +20,9 @@ import {
   getPaginationRowModel,
   ColumnDef,
   flexRender,
-  SortingState
+  SortingState,
+  ColumnFiltersState,
+  VisibilityState
 } from "@tanstack/react-table";
 import {
   Search,
@@ -33,7 +35,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Filter,
+  Download,
+  RefreshCw,
+  SlidersHorizontal
 } from "lucide-react";
 import {
   Dialog,
@@ -59,6 +65,18 @@ export default function ProductsPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [isOpenColumns, setIsOpenColumns] = useState(false);
+
+  const handleResetFilters = () => {
+    setGlobalFilter("");
+    setCategoryFilter("all");
+    setColumnFilters([]);
+  };
+
+  const isFiltered = globalFilter !== "" || categoryFilter !== "all" || columnFilters.length > 0;
 
   // Dialog States
   const [isOpenAdd, setIsOpenAdd] = useState(false);
@@ -315,15 +333,41 @@ export default function ProductsPage() {
     [handleOpenEdit, handleOpenDelete]
   );
 
+  const exportToCSV = () => {
+    const headers = ["ID", "Name", "SKU", "Category", "Price", "Stock", "Status"];
+    const rows = table.getFilteredRowModel().rows.map(row => {
+      const p = row.original;
+      return [p.id, p.name, p.sku, p.category, p.price, p.stock, p.status];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `modfirst_products_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const table = useReactTable({
     data: filteredProducts,
     columns,
     state: {
       sorting,
-      globalFilter
+      globalFilter,
+      columnFilters,
+      columnVisibility
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -354,23 +398,23 @@ export default function ProductsPage() {
       </div>
 
       {/* Filters & Search Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="h-4 w-4 text-muted-foreground" />
-          </span>
-          <Input
-            type="text"
-            placeholder="Search products by name or SKU..."
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="pl-9 rounded-xl border-border/50 bg-card/40 backdrop-blur-sm focus-visible:ring-1"
-          />
-        </div>
+      <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1 max-w-2xl">
+          <div className="relative flex-1">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-4 w-4 text-muted-foreground" />
+            </span>
+            <Input
+              type="text"
+              placeholder="Search products by name or SKU..."
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="pl-9 rounded-xl border-border/50 bg-card/40 backdrop-blur-sm focus-visible:ring-1"
+            />
+          </div>
 
-        <div className="flex items-center gap-3">
           <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || "all")}>
-            <SelectTrigger className="w-48 rounded-xl border-border/50 bg-card/40 backdrop-blur-sm">
+            <SelectTrigger className="w-full sm:w-48 rounded-xl border-border/50 bg-card/40 backdrop-blur-sm">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -382,6 +426,80 @@ export default function ProductsPage() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              onClick={handleResetFilters}
+              className="rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 flex items-center gap-1.5 font-semibold text-xs h-10 px-3 transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Clear Filters
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            onClick={() => setShowColumnFilters(!showColumnFilters)}
+            className={`rounded-xl border-border/50 backdrop-blur-sm flex items-center gap-2 text-xs font-semibold h-10 ${
+              showColumnFilters
+                ? "bg-primary/25 border-primary text-foreground hover:bg-primary/30"
+                : "bg-card/40 hover:bg-muted"
+            }`}
+          >
+            <Filter className="h-4 w-4" />
+            {showColumnFilters ? "Hide Filters" : "Column Filters"}
+          </Button>
+
+          {/* Column Visibility Dropdown */}
+          <div className="relative">
+            <Button
+              variant="outline"
+              onClick={() => setIsOpenColumns(!isOpenColumns)}
+              className="rounded-xl border-border/50 bg-card/40 backdrop-blur-sm flex items-center gap-2 text-xs font-semibold h-10 hover:bg-muted"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Columns
+            </Button>
+            {isOpenColumns && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setIsOpenColumns(false)} />
+                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-border/50 bg-popover p-3 shadow-lg z-20 space-y-1.5 text-popover-foreground">
+                  <p className="text-xs font-bold text-muted-foreground px-1 pb-1 border-b border-border/40 mb-1.5 select-none">
+                    Toggle Columns
+                  </p>
+                  {table.getAllLeafColumns().map((column) => {
+                    if (column.id === "actions" || column.id === "image") return null;
+                    return (
+                      <label
+                        key={column.id}
+                        className="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-muted text-xs font-semibold cursor-pointer select-none capitalize"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={column.getIsVisible()}
+                          onChange={column.getToggleVisibilityHandler()}
+                          className="rounded border-border/60 text-primary focus:ring-0 cursor-pointer h-3.5 w-3.5"
+                        />
+                        {column.id}
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={exportToCSV}
+            className="rounded-xl border-border/50 bg-card/40 backdrop-blur-sm flex items-center gap-2 text-xs font-semibold h-10 hover:bg-muted"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
         </div>
       </div>
 
@@ -403,20 +521,65 @@ export default function ProductsPage() {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id} className="border-b border-border/40 bg-muted/20 text-muted-foreground font-semibold">
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id} className="p-4 pl-6 first:pl-6 last:pr-6">
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
+                  <React.Fragment key={headerGroup.id}>
+                    <tr className="border-b border-border/40 bg-muted/25 text-muted-foreground font-semibold">
+                      {headerGroup.headers.map((header) => (
+                        <th key={header.id} className="p-3 pl-4 first:pl-4 last:pr-4 text-xs select-none">
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                    {showColumnFilters && (
+                      <tr className="border-b border-border/40 bg-muted/10">
+                        {headerGroup.headers.map((header) => {
+                          const colId = header.column.id;
+                          return (
+                            <th key={`filter-${colId}`} className="p-2 pl-4 first:pl-4 last:pr-4 bg-card/10 align-middle">
+                              {colId === "image" || colId === "actions" ? null : colId === "category" ? (
+                                <select
+                                  value={(header.column.getFilterValue() as string) ?? ""}
+                                  onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                                  className="h-9 w-full text-xs bg-card border border-border/50 rounded-lg px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                                >
+                                  <option value="">All</option>
+                                  {categories.map((c) => (
+                                    <option key={c} value={c}>
+                                      {c}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : colId === "status" ? (
+                                <select
+                                  value={(header.column.getFilterValue() as string) ?? ""}
+                                  onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                                  className="h-9 w-full text-xs bg-card border border-border/50 rounded-lg px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary capitalize font-medium"
+                                >
+                                  <option value="">All</option>
+                                  <option value="active">Active</option>
+                                  <option value="draft">Draft</option>
+                                  <option value="archived">Archived</option>
+                                </select>
+                              ) : (
+                                <Input
+                                  placeholder={`Filter ${colId.charAt(0).toUpperCase() + colId.slice(1)}...`}
+                                  value={(header.column.getFilterValue() as string) ?? ""}
+                                  onChange={(e) => header.column.setFilterValue(e.target.value)}
+                                  className="h-9 px-3 rounded-lg text-xs bg-card border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
+                                />
+                              )}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </thead>
               <tbody className="divide-y divide-border/20">
                 {table.getRowModel().rows.map((row) => (
                   <tr key={row.id} className="hover:bg-muted/10 transition-colors">
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="p-4 pl-6 first:pl-6 last:pr-6 align-middle">
+                      <td key={cell.id} className="p-3 pl-4 first:pl-4 last:pr-4 align-middle">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
@@ -429,24 +592,43 @@ export default function ProductsPage() {
 
         {/* Pagination Toolbar */}
         {!isLoading && filteredProducts.length > 0 && (
-          <div className="flex items-center justify-between p-4 border-t border-border/30 bg-muted/5">
-            <div className="text-xs text-muted-foreground">
-              Showing <span className="font-semibold text-foreground">{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span> to{" "}
-              <span className="font-semibold text-foreground">
-                {Math.min(
-                  (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                  filteredProducts.length
-                )}
-              </span>{" "}
-              of <span className="font-semibold text-foreground">{filteredProducts.length}</span> products
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border/30 bg-muted/5">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground justify-center sm:justify-start">
+              <div>
+                Showing <span className="font-semibold text-foreground">{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span> to{" "}
+                <span className="font-semibold text-foreground">
+                  {Math.min(
+                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                    filteredProducts.length
+                  )}
+                </span>{" "}
+                of <span className="font-semibold text-foreground">{filteredProducts.length}</span> products
+              </div>
+              
+              <div className="flex items-center gap-1.5 sm:border-l sm:border-border/60 sm:pl-4">
+                <span>Show</span>
+                <select
+                  value={table.getState().pagination.pageSize}
+                  onChange={(e) => table.setPageSize(Number(e.target.value))}
+                  className="h-8 bg-card border border-border/50 rounded-lg px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs font-semibold select-none cursor-pointer"
+                >
+                  {[5, 10, 20, 50].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+                <span>rows</span>
+              </div>
             </div>
+            
             <div className="flex items-center gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
-                className="h-8 rounded-lg"
+                className="h-9 rounded-xl font-semibold text-xs"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Prev
@@ -456,7 +638,7 @@ export default function ProductsPage() {
                 size="sm"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
-                className="h-8 rounded-lg"
+                className="h-9 rounded-xl font-semibold text-xs"
               >
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />

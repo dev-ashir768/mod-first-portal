@@ -50,7 +50,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
             
             {/* Store title for context */}
             <div className="hidden sm:block">
-              <h1 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">E-commerce Portal</h1>
+              <h1 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">DTF Printing Portal</h1>
               <p className="text-sm text-foreground font-bold leading-tight mt-0.5">{settings.storeName}</p>
             </div>
           </div>

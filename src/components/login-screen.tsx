@@ -86,7 +86,7 @@ export function LoginScreen() {
             className="h-10 w-auto mb-2 dark:invert"
           />
           <h1 className="text-xs font-bold tracking-widest text-muted-foreground uppercase leading-none">
-            E-Commerce Admin Portal
+            ModFirst Admin Portal
           </h1>
         </div>
 

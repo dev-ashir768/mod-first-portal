@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ModFirst E-commerce Portal",
-  description: "Modern E-commerce Administrative Portal",
+  title: "ModFirst DTF Transfers Portal",
+  description: "Modern administrative portal for custom DTF gang sheets, UV decals, and transfer print fulfillment.",
 };
 
 export default function RootLayout({

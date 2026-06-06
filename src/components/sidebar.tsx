@@ -9,7 +9,6 @@ import {
   ShoppingCart,
   Users,
   Settings,
-  ChevronLeft,
   X,
   Sun,
   Moon,
@@ -24,7 +23,7 @@ interface SidebarProps {
   setIsMobileOpen: (open: boolean) => void;
 }
 
-export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }: SidebarProps) {
+export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarProps) {
   const pathname = usePathname();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -59,8 +58,10 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
   const sidebarContent = (
     <div className="flex flex-col h-full bg-card/60 backdrop-blur-xl border-r border-border/50 text-card-foreground overflow-x-hidden">
       {/* Header / Logo */}
-      <div className="flex items-center justify-between p-4 h-16 border-b border-border/40 shrink-0">
-        <Link href="/" className={`flex items-center select-none shrink-0 ${isCollapsed && !isMobileOpen ? "mx-auto" : ""}`}>
+      <div className={`flex items-center justify-between border-b border-border/40 shrink-0 transition-all duration-300 ${
+        isCollapsed && !isMobileOpen ? "px-5 py-4 h-16" : "px-4 py-4 h-16"
+      }`}>
+        <Link href="/" className="flex items-center select-none shrink-0">
           <div className={`overflow-hidden transition-all duration-300 shrink-0 ${isCollapsed && !isMobileOpen ? "w-6" : "w-[146px]"}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -91,10 +92,10 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
               key={item.href}
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
-              className={`flex items-center transition-all duration-200 group relative ${
+              className={`flex items-center transition-all duration-300 group relative rounded-xl text-sm font-medium w-full h-10 overflow-hidden shrink-0 ${
                 isCollapsed && !isMobileOpen
-                  ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto rounded-xl"
-                  : "gap-3 px-3 py-2.5 rounded-xl text-sm font-medium"
+                  ? "px-[10px]"
+                  : "px-3"
               } ${
                 isActive
                   ? "bg-primary text-primary-foreground shadow-md shadow-primary/10"
@@ -105,9 +106,13 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
                 isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
               }`} />
               
-              {(!isCollapsed || isMobileOpen) && (
-                <span className="truncate">{item.name}</span>
-              )}
+              <span className={`truncate transition-all duration-300 overflow-hidden ${
+                isCollapsed && !isMobileOpen
+                  ? "opacity-0 max-w-0 ml-0 pointer-events-none"
+                  : "opacity-100 max-w-[150px] ml-3"
+              }`}>
+                {item.name}
+              </span>
 
               {/* Tooltip for collapsed sidebar */}
               {isCollapsed && !isMobileOpen && (
@@ -125,21 +130,33 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
         {/* Theme Toggle */}
         <button
           onClick={toggleDarkMode}
-          className={`flex items-center transition-all duration-200 ${
+          className={`flex items-center transition-all duration-300 w-full h-10 overflow-hidden rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 ${
             isCollapsed && !isMobileOpen
-              ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto rounded-xl"
-              : "gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              ? "px-[10px]"
+              : "px-3"
           }`}
         >
           {isDarkMode ? (
             <>
               <Sun className="h-5 w-5 text-amber-500 shrink-0" />
-              {(!isCollapsed || isMobileOpen) && <span>Light Mode</span>}
+              <span className={`truncate transition-all duration-300 overflow-hidden ${
+                isCollapsed && !isMobileOpen
+                  ? "opacity-0 max-w-0 ml-0 pointer-events-none"
+                  : "opacity-100 max-w-[150px] ml-3"
+              }`}>
+                Light Mode
+              </span>
             </>
           ) : (
             <>
               <Moon className="h-5 w-5 text-indigo-400 shrink-0" />
-              {(!isCollapsed || isMobileOpen) && <span>Dark Mode</span>}
+              <span className={`truncate transition-all duration-300 overflow-hidden ${
+                isCollapsed && !isMobileOpen
+                  ? "opacity-0 max-w-0 ml-0 pointer-events-none"
+                  : "opacity-100 max-w-[150px] ml-3"
+              }`}>
+                Dark Mode
+              </span>
             </>
           )}
         </button>
@@ -147,14 +164,20 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
         {/* Log Out */}
         <button
           onClick={() => useStore.getState().logout()}
-          className={`flex items-center transition-all duration-200 ${
+          className={`flex items-center transition-all duration-300 w-full h-10 overflow-hidden rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/10 ${
             isCollapsed && !isMobileOpen
-              ? "justify-center px-0 py-2.5 h-10 w-10 mx-auto rounded-xl hover:bg-rose-500/10"
-              : "gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/10"
+              ? "px-[10px]"
+              : "px-3"
           }`}
         >
           <LogOut className="h-5 w-5 text-rose-500 shrink-0" />
-          {(!isCollapsed || isMobileOpen) && <span>Log Out</span>}
+          <span className={`truncate transition-all duration-300 overflow-hidden text-rose-500 ${
+            isCollapsed && !isMobileOpen
+              ? "opacity-0 max-w-0 ml-0 pointer-events-none"
+              : "opacity-100 max-w-[150px] ml-3"
+          }`}>
+            Log Out
+          </span>
         </button>
       </div>
     </div>

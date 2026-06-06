@@ -10,7 +10,6 @@ import {
   Users,
   Settings,
   ChevronLeft,
-  ChevronRight,
   X,
   Sun,
   Moon,
@@ -61,7 +60,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
     <div className="flex flex-col h-full bg-card/60 backdrop-blur-xl border-r border-border/50 text-card-foreground overflow-x-hidden">
       {/* Header / Logo */}
       <div className="flex items-center justify-between p-4 h-16 border-b border-border/40 shrink-0">
-        <Link href="/" className={`flex items-center gap-2.5 select-none shrink-0 ${isCollapsed && !isMobileOpen ? "mx-auto" : ""}`}>
+        <Link href="/" className={`flex items-center select-none shrink-0 ${isCollapsed && !isMobileOpen ? "mx-auto" : ""}`}>
           <div className={`overflow-hidden transition-all duration-300 shrink-0 ${isCollapsed && !isMobileOpen ? "w-6" : "w-[146px]"}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -70,28 +69,14 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
               className="h-7 w-auto max-w-none transition-transform duration-300"
             />
           </div>
-          {(!isCollapsed || isMobileOpen) && (
-            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 bg-clip-text text-transparent whitespace-nowrap">
-              Portal
-            </span>
-          )}
         </Link>
-        {isMobileOpen ? (
+        {isMobileOpen && (
           <button
             onClick={() => setIsMobileOpen(false)}
             className="md:hidden p-1.5 rounded-xl text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
-        ) : (
-          !isCollapsed && (
-            <button
-              onClick={() => setIsCollapsed(true)}
-              className="hidden md:block p-1.5 rounded-xl text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-          )
         )}
       </div>
 
@@ -170,25 +155,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
         >
           <LogOut className="h-5 w-5 text-rose-500 shrink-0" />
           {(!isCollapsed || isMobileOpen) && <span>Log Out</span>}
-        </button>
-
-        {/* Collapse Toggle (Desktop only) */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`hidden md:flex items-center transition-all duration-200 ${
-            isCollapsed && !isMobileOpen
-              ? "justify-center px-0 py-2 h-10 w-10 mx-auto rounded-xl hover:bg-muted/50"
-              : "gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          }`}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-5 w-5 shrink-0" />
-          ) : (
-            <>
-              <ChevronLeft className="h-5 w-5 shrink-0" />
-              {(!isCollapsed || isMobileOpen) && <span>Collapse</span>}
-            </>
-          )}
         </button>
       </div>
     </div>

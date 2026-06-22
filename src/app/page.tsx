@@ -42,12 +42,9 @@ export default function DashboardPage() {
   }));
 
   useEffect(() => {
-    setTimeout(() => {
-      setMounted(true);
-    }, 0);
+    setTimeout(() => setMounted(true), 0);
   }, []);
 
-  // Filter orders by date range
   const filteredOrders = useMemo(() => {
     return (
       orders?.filter((o) => {
@@ -60,56 +57,37 @@ export default function DashboardPage() {
     );
   }, [orders, dateRange]);
 
-  const completedOrders = useMemo(() => {
-    return filteredOrders.filter((o) => o.status === "completed");
-  }, [filteredOrders]);
-
-  // Dynamic calculations
-  const totalRevenue = useMemo(() => {
-    return completedOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-  }, [completedOrders]);
-
+  const completedOrders = useMemo(() => filteredOrders.filter((o) => o.status === "completed"), [filteredOrders]);
+  const totalRevenue = useMemo(() => completedOrders.reduce((sum, o) => sum + o.totalAmount, 0), [completedOrders]);
   const totalOrdersCount = filteredOrders.length;
   const totalCustomersCount = customers?.length || 0;
-  
-  const averageOrderValue = useMemo(() => {
-    return completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
-  }, [completedOrders, totalRevenue]);
+  const averageOrderValue = useMemo(() => (completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0), [completedOrders, totalRevenue]);
 
-  // Chart Data 1: Dynamic Sales Revenue Over Time grouped by day in interval
   const salesChartData = useMemo(() => {
-    if (!dateRange || !dateRange.from || !dateRange.to) {
-      // Fallback
+    if (!dateRange?.from || !dateRange?.to) {
       return [
-        { date: "May 31", revenue: 500 },
-        { date: "Jun 01", revenue: 1200 },
-        { date: "Jun 02", revenue: 1750 },
-        { date: "Jun 03", revenue: 2130 },
-        { date: "Jun 04", revenue: 2480 },
-        { date: "Jun 05", revenue: 2610 },
+        { date: "May 31", revenue: 500 }, { date: "Jun 01", revenue: 1200 },
+        { date: "Jun 02", revenue: 1750 }, { date: "Jun 03", revenue: 2130 },
+        { date: "Jun 04", revenue: 2480 }, { date: "Jun 05", revenue: 2610 },
         { date: "Jun 06", revenue: 2610 + totalRevenue }
       ];
     }
-
     const days: Record<string, number> = {};
     completedOrders.forEach((o) => {
       const dayStr = format(new Date(o.createdAt), "MMM dd");
       days[dayStr] = (days[dayStr] || 0) + o.totalAmount;
     });
-
     if (Object.keys(days).length === 0) {
       return [
         { date: format(dateRange.from, "MMM dd"), revenue: 0 },
-        { date: format(dateRange.to, "MMM dd"), revenue: 0 }
+        { date: format(dateRange.to!, "MMM dd"), revenue: 0 }
       ];
     }
-
     return Object.entries(days)
       .map(([date, revenue]) => ({ date, revenue }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [completedOrders, dateRange, totalRevenue]);
 
-  // Chart Data 2: Sales by Category
   const categoryData = useMemo(() => {
     const categoryMap: Record<string, number> = {};
     products?.forEach((p) => {
@@ -117,267 +95,175 @@ export default function DashboardPage() {
         .flatMap((o) => o.items)
         .filter((item) => item.id === p.id)
         .reduce((sum, item) => sum + item.price * item.quantity, 0);
-
       categoryMap[p.category] = (categoryMap[p.category] || 0) + (revenue || p.price * 2);
     });
-
-    return Object.entries(categoryMap).map(([name, value]) => ({
-      name,
-      sales: parseFloat(value.toFixed(2))
-    }));
+    return Object.entries(categoryMap).map(([name, value]) => ({ name, sales: parseFloat(value.toFixed(2)) }));
   }, [completedOrders, products]);
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD"
-    }).format(val);
-  };
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
 
   const statusColors = {
     pending: "bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200/50",
-    processing: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-200/50",
+    processing: "bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50",
     completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/50",
     cancelled: "bg-rose-100 text-rose-800 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200/50"
   };
 
   if (isLoadingOrders || isLoadingCustomers || isLoadingProducts) {
     return (
-      <div className="space-y-6 animate-pulse">
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
+          <Skeleton className="h-6 w-36" />
           <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32 rounded-2xl" />
-          ))}
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-[350px] md:col-span-2 rounded-2xl" />
-          <Skeleton className="h-[350px] rounded-2xl" />
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-72 md:col-span-2 rounded-lg" />
+          <Skeleton className="h-72 rounded-lg" />
         </div>
-        <Skeleton className="h-64 rounded-2xl" />
+        <Skeleton className="h-48 rounded-lg" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border/20">
+    <div className="space-y-4">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
-            Dashboard
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Real-time analytics and transaction overviews.
-          </p>
+          <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Analytics and transaction overview</p>
         </div>
         <div className="shrink-0">
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </div>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-2xl border-border/40 bg-card/40 backdrop-blur-md hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-              <DollarSign className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black">{formatCurrency(totalRevenue)}</div>
-            <div className="flex items-center gap-1 mt-1 text-xs text-emerald-500 font-semibold">
-              <ArrowUpRight className="h-3.5 w-3.5" />
-              <span>+12.4% from last week</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-border/40 bg-card/40 backdrop-blur-md hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Sales Orders</CardTitle>
-            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500">
-              <ShoppingCart className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black">+{totalOrdersCount}</div>
-            <div className="flex items-center gap-1 mt-1 text-xs text-indigo-500 font-semibold">
-              <ArrowUpRight className="h-3.5 w-3.5" />
-              <span>+8.2% in selected range</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-border/40 bg-card/40 backdrop-blur-md hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Customers</CardTitle>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
-              <Users className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black">{totalCustomersCount}</div>
-            <div className="flex items-center gap-1 mt-1 text-xs text-purple-500 font-semibold">
-              <ArrowUpRight className="h-3.5 w-3.5" />
-              <span>+4 new registrations</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-border/40 bg-card/40 backdrop-blur-md hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Order Value</CardTitle>
-            <div className="p-2 rounded-xl bg-pink-500/10 text-pink-500">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black">{formatCurrency(averageOrderValue)}</div>
-            <div className="flex items-center gap-1 mt-1 text-xs text-rose-500 font-semibold">
-              <ArrowDownRight className="h-3.5 w-3.5" />
-              <span>-1.2% checkout size</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Metric cards */}
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Total Revenue", value: formatCurrency(totalRevenue), sub: "+12.4% from last week", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/20", up: true },
+          { label: "Sales Orders", value: `+${totalOrdersCount}`, sub: "+8.2% in selected range", icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/20", up: true },
+          { label: "Active Customers", value: `${totalCustomersCount}`, sub: "+4 new registrations", icon: Users, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/20", up: true },
+          { label: "Avg. Order Value", value: formatCurrency(averageOrderValue), sub: "-1.2% checkout size", icon: TrendingUp, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/20", up: false },
+        ].map(({ label, value, sub, icon: Icon, color, bg, up }) => (
+          <Card key={label}>
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 space-y-0">
+              <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
+              <div className={`p-1.5 rounded ${bg} ${color}`}>
+                <Icon className="h-3.5 w-3.5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold text-foreground">{value}</div>
+              <div className={`flex items-center gap-0.5 mt-1 text-xs font-medium ${up ? "text-emerald-600" : "text-rose-500"}`}>
+                {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                <span>{sub}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Graphs Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Sales Area Chart */}
-        <Card className="rounded-2xl border-border/40 bg-card/40 backdrop-blur-md md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Activity className="h-5 w-5 text-indigo-500" />
-              Revenue Growth Over Time
+      {/* Charts */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <Activity className="h-4 w-4 text-blue-500" />
+              Revenue Over Time
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-60">
             {mounted ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={salesChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-primary, #6366f1)" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="var(--color-primary, #6366f1)" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--popover)",
-                      borderColor: "var(--border)",
-                      color: "var(--foreground)",
-                      borderRadius: "12px"
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="var(--color-primary, #6366f1)"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                  />
+                  <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "var(--popover)", borderColor: "var(--border)", color: "var(--foreground)", borderRadius: "6px", fontSize: "12px" }} />
+                  <Area type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
                 </AreaChart>
               </ResponsiveContainer>
-            ) : (
-              <Skeleton className="h-full w-full rounded-xl" />
-            )}
+            ) : <Skeleton className="h-full w-full rounded" />}
           </CardContent>
         </Card>
 
-        {/* Category breakdown Bar Chart */}
-        <Card className="rounded-2xl border-border/40 bg-card/40 backdrop-blur-md">
-          <CardHeader>
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Package className="h-5 w-5 text-purple-500" />
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <Package className="h-4 w-4 text-purple-500" />
               Sales by Category
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-60">
             {mounted ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <BarChart data={categoryData} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--popover)",
-                      borderColor: "var(--border)",
-                      color: "var(--foreground)",
-                      borderRadius: "12px"
-                    }}
-                  />
-                  <Bar dataKey="sales" fill="var(--color-primary, #8b5cf6)" radius={[4, 4, 0, 0]} barSize={28} />
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "var(--popover)", borderColor: "var(--border)", color: "var(--foreground)", borderRadius: "6px", fontSize: "12px" }} />
+                  <Bar dataKey="sales" fill="var(--color-primary)" radius={[3, 3, 0, 0]} barSize={22} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <Skeleton className="h-full w-full rounded-xl" />
-            )}
+            ) : <Skeleton className="h-full w-full rounded" />}
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity / Orders Table */}
-      <Card className="rounded-2xl border-border/40 bg-card/40 backdrop-blur-md">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-indigo-500" />
+      {/* Recent Orders table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border">
+          <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+            <ShoppingCart className="h-4 w-4 text-blue-500" />
             Recent Orders
           </CardTitle>
-          <Badge variant="outline" className="border-border/60">
-            Filtered List
-          </Badge>
+          <Badge variant="outline" className="text-[10px] h-5">Filtered</Badge>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-border/40 bg-muted/20 text-muted-foreground font-semibold">
-                <th className="p-4 pl-6">ID</th>
-                <th className="p-4">Customer</th>
-                <th className="p-4">Date</th>
-                <th className="p-4">Amount</th>
-                <th className="p-4 pr-6 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/20">
-              {filteredOrders.slice(0, 4).map((order) => (
-                <tr key={order.id} className="hover:bg-muted/10 transition-colors">
-                  <td className="p-4 pl-6 font-mono font-medium text-xs text-indigo-500">{order.id}</td>
-                  <td className="p-4">
-                    <div className="font-semibold text-foreground">{order.customerName}</div>
-                    <div className="text-xs text-muted-foreground">{order.customerEmail}</div>
-                  </td>
-                  <td className="p-4 text-muted-foreground text-xs">
-                    {new Date(order.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
-                  </td>
-                  <td className="p-4 font-bold text-foreground">{formatCurrency(order.totalAmount)}</td>
-                  <td className="p-4 pr-6 text-right">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                        statusColors[order.status]
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-muted-foreground">
+                  <th className="px-4 py-2.5 text-xs font-medium">ID</th>
+                  <th className="px-3 py-2.5 text-xs font-medium">Customer</th>
+                  <th className="px-3 py-2.5 text-xs font-medium">Date</th>
+                  <th className="px-3 py-2.5 text-xs font-medium">Amount</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredOrders.slice(0, 5).map((order) => (
+                  <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-xs text-blue-600">{order.id}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="text-sm font-medium text-foreground">{order.customerName}</div>
+                      <div className="text-xs text-muted-foreground">{order.customerEmail}</div>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td className="px-3 py-2.5 text-sm font-semibold">{formatCurrency(order.totalAmount)}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${statusColors[order.status]}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

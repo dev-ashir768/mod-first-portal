@@ -1,59 +1,33 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
-import {
-  useProducts,
-  useAddProduct,
-  useUpdateProduct,
-  useDeleteProduct
-} from "@/hooks/useMockData";
+import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useMockData";
 import { Product } from "@/store/useStore";
 import { productSchema, ProductFormValues } from "@/lib/schema";
 import { useToast } from "@/store/useToast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  ColumnDef,
-  flexRender,
-  SortingState,
-  ColumnFiltersState,
-  VisibilityState
+  useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel,
+  getPaginationRowModel, ColumnDef, flexRender, SortingState, ColumnFiltersState, VisibilityState
 } from "@tanstack/react-table";
 import {
-  Search,
-  Plus,
-  Edit2,
-  Trash2,
-  Package,
-  FolderOpen,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  AlertTriangle,
-  Filter,
-  Download,
-  RefreshCw,
-  SlidersHorizontal
+  Search, Plus, Edit2, Trash2, Package, FolderOpen, ArrowUpDown,
+  ChevronLeft, ChevronRight, Loader2, AlertTriangle, Download, RefreshCw, Filter
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+
+const statusMap = {
+  active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/50",
+  draft: "bg-amber-100 text-amber-800 dark:bg-amber-950/20 dark:text-amber-400 border-amber-200/50",
+  archived: "bg-rose-100 text-rose-800 dark:bg-rose-950/20 dark:text-rose-400 border-rose-200/50"
+};
 
 export default function ProductsPage() {
   const { data: products = [], isLoading } = useProducts();
@@ -68,67 +42,30 @@ export default function ProductsPage() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [showColumnFilters, setShowColumnFilters] = useState(false);
-  const [isOpenColumns, setIsOpenColumns] = useState(false);
-
-  const handleResetFilters = () => {
-    setGlobalFilter("");
-    setCategoryFilter("all");
-    setColumnFilters([]);
-  };
 
   const isFiltered = globalFilter !== "" || categoryFilter !== "all" || columnFilters.length > 0;
 
-  // Dialog States
   const [isOpenAdd, setIsOpenAdd] = useState(false);
   const [isOpenEdit, setIsOpenEdit] = useState(false);
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Form Hooks
-  const {
-    register: registerAdd,
-    handleSubmit: handleSubmitAdd,
-    reset: resetAdd,
-    setValue: setValueAdd,
-    formState: { errors: errorsAdd }
-  } = useForm<ProductFormValues>({
+  const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, setValue: setValueAdd, formState: { errors: errorsAdd } } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      sku: "",
-      price: 0,
-      stock: 0,
-      category: "",
-      status: "active",
-      image: ""
-    }
+    defaultValues: { name: "", description: "", sku: "", price: 0, stock: 0, category: "", status: "active", image: "" }
   });
 
-  const {
-    register: registerEdit,
-    handleSubmit: handleSubmitEdit,
-    reset: resetEdit,
-    setValue: setValueEdit,
-    watch: watchEdit,
-    formState: { errors: errorsEdit }
-  } = useForm<ProductFormValues>({
+  const { register: registerEdit, handleSubmit: handleSubmitEdit, reset: resetEdit, setValue: setValueEdit, watch: watchEdit, formState: { errors: errorsEdit } } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema)
   });
 
-  // Extract unique categories
-  const categories = useMemo(() => {
-    const set = new Set(products.map((p) => p.category));
-    return Array.from(set);
-  }, [products]);
+  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products]);
 
-  // Filter products by category (done before table processing)
   const filteredProducts = useMemo(() => {
     if (categoryFilter === "all") return products;
     return products.filter((p) => p.category.toLowerCase() === categoryFilter.toLowerCase());
   }, [products, categoryFilter]);
 
-  // Handlers
   const handleOpenAdd = () => {
     resetAdd();
     setValueAdd("status", "active");
@@ -138,16 +75,7 @@ export default function ProductsPage() {
 
   const handleOpenEdit = useCallback((product: Product) => {
     setSelectedProduct(product);
-    resetEdit({
-      name: product.name,
-      description: product.description,
-      sku: product.sku,
-      price: product.price,
-      stock: product.stock,
-      category: product.category,
-      status: product.status,
-      image: product.image || ""
-    });
+    resetEdit({ name: product.name, description: product.description, sku: product.sku, price: product.price, stock: product.stock, category: product.category, status: product.status, image: product.image || "" });
     setIsOpenEdit(true);
   }, [resetEdit]);
 
@@ -158,180 +86,125 @@ export default function ProductsPage() {
 
   const onAddSubmit = (values: ProductFormValues) => {
     addMutation.mutate(values, {
-      onSuccess: () => {
-        addToast(`Product "${values.name}" created successfully.`, "success", "Product Created");
-        setIsOpenAdd(false);
-        resetAdd();
-      },
-      onError: () => {
-        addToast("Failed to create product. Please try again.", "error", "Operation Failed");
-      }
+      onSuccess: () => { addToast(`"${values.name}" created.`, "success", "Product Created"); setIsOpenAdd(false); resetAdd(); },
+      onError: () => addToast("Failed to create product.", "error", "Error")
     });
   };
 
   const onEditSubmit = (values: ProductFormValues) => {
     if (!selectedProduct) return;
-    updateMutation.mutate(
-      { id: selectedProduct.id, fields: values },
-      {
-        onSuccess: () => {
-          addToast(`Product "${values.name}" updated successfully.`, "success", "Product Updated");
-          setIsOpenEdit(false);
-        },
-        onError: () => {
-          addToast("Failed to update product.", "error", "Operation Failed");
-        }
-      }
-    );
+    updateMutation.mutate({ id: selectedProduct.id, fields: values }, {
+      onSuccess: () => { addToast(`"${values.name}" updated.`, "success", "Updated"); setIsOpenEdit(false); },
+      onError: () => addToast("Failed to update product.", "error", "Error")
+    });
   };
 
   const onDeleteConfirm = () => {
     if (!selectedProduct) return;
     deleteMutation.mutate(selectedProduct.id, {
-      onSuccess: () => {
-        addToast(`Product "${selectedProduct.name}" has been deleted.`, "success", "Product Deleted");
-        setIsOpenDelete(false);
-      },
-      onError: () => {
-        addToast("Failed to delete product.", "error", "Operation Failed");
-      }
+      onSuccess: () => { addToast(`"${selectedProduct.name}" deleted.`, "success", "Deleted"); setIsOpenDelete(false); },
+      onError: () => addToast("Failed to delete product.", "error", "Error")
     });
   };
 
-  // Tanstack Table Config
-  const columns = useMemo<ColumnDef<Product>[]>(
-    () => [
-      {
-        accessorKey: "image",
-        header: "",
-        cell: ({ row }) => {
-          const imgUrl = row.original.image;
-          return (
-            <div className="h-10 w-10 rounded-xl overflow-hidden bg-muted border border-border/50 shrink-0 flex items-center justify-center">
-              {imgUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={imgUrl} alt={row.original.name} className="h-full w-full object-cover" />
-              ) : (
-                <Package className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
-          );
-        },
-        enableSorting: false
-      },
-      {
-        accessorKey: "name",
-        header: ({ column }) => (
-          <button
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="flex items-center gap-1 hover:text-foreground font-semibold"
-          >
-            Name
-            <ArrowUpDown className="h-3.5 w-3.5" />
-          </button>
-        ),
-        cell: ({ row }) => (
-          <div className="max-w-[200px] sm:max-w-xs">
-            <div className="font-bold text-foreground truncate">{row.original.name}</div>
-            <div className="text-xs text-muted-foreground truncate">{row.original.description}</div>
+  const columns = useMemo<ColumnDef<Product>[]>(() => [
+    {
+      accessorKey: "image",
+      header: "",
+      cell: ({ row }) => {
+        const imgUrl = row.original.image;
+        return (
+          <div className="h-8 w-8 rounded overflow-hidden bg-muted border border-border shrink-0 flex items-center justify-center">
+            {imgUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imgUrl} alt={row.original.name} className="h-full w-full object-cover" />
+            ) : (
+              <Package className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
-        )
+        );
       },
-      {
-        accessorKey: "sku",
-        header: "SKU",
-        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.sku}</span>
-      },
-      {
-        accessorKey: "category",
-        header: "Category",
-        cell: ({ row }) => (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-lg bg-muted border border-border/30">
-            <FolderOpen className="h-3 w-3 text-muted-foreground" />
-            {row.original.category}
-          </span>
-        )
-      },
-      {
-        accessorKey: "price",
-        header: ({ column }) => (
-          <button
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="flex items-center gap-1 hover:text-foreground font-semibold"
-          >
-            Price
-            <ArrowUpDown className="h-3.5 w-3.5" />
-          </button>
-        ),
-        cell: ({ row }) => {
-          const price = parseFloat(row.getValue("price"));
-          return <span className="font-bold text-foreground">${price.toFixed(2)}</span>;
-        }
-      },
-      {
-        accessorKey: "stock",
-        header: ({ column }) => (
-          <button
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="flex items-center gap-1 hover:text-foreground font-semibold"
-          >
-            Stock
-            <ArrowUpDown className="h-3.5 w-3.5" />
-          </button>
-        ),
-        cell: ({ row }) => {
-          const stock = row.original.stock;
-          return (
-            <div>
-              <span className={`font-semibold ${stock === 0 ? "text-rose-500 font-bold" : "text-foreground"}`}>
-                {stock} units
-              </span>
-              {stock === 0 && <span className="text-[10px] block text-rose-500 font-semibold leading-none mt-0.5">Out of Stock</span>}
-            </div>
-          );
-        }
-      },
-      {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => {
-          const status = row.original.status;
-          const map = {
-            active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/50",
-            draft: "bg-amber-100 text-amber-800 dark:bg-amber-950/20 dark:text-amber-400 border-amber-200/50",
-            archived: "bg-rose-100 text-rose-800 dark:bg-rose-950/20 dark:text-rose-400 border-rose-200/50"
-          };
-          return (
-            <Badge variant="outline" className={`capitalize font-semibold border ${map[status]}`}>
-              {status}
-            </Badge>
-          );
-        }
-      },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2 pr-2">
-            <button
-              onClick={() => handleOpenEdit(row.original)}
-              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-indigo-600 transition-colors"
-            >
-              <Edit2 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => handleOpenDelete(row.original)}
-              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-rose-600 transition-colors"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+      enableSorting: false
+    },
+    {
+      accessorKey: "name",
+      header: ({ column }) => (
+        <button onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="flex items-center gap-1 hover:text-foreground font-medium">
+          Name <ArrowUpDown className="h-3 w-3" />
+        </button>
+      ),
+      cell: ({ row }) => (
+        <div className="max-w-[180px]">
+          <div className="text-sm font-medium text-foreground truncate">{row.original.name}</div>
+          <div className="text-xs text-muted-foreground truncate">{row.original.description}</div>
+        </div>
+      )
+    },
+    {
+      accessorKey: "sku",
+      header: "SKU",
+      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.sku}</span>
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+      cell: ({ row }) => (
+        <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted border border-border text-muted-foreground">
+          <FolderOpen className="h-2.5 w-2.5" />{row.original.category}
+        </span>
+      )
+    },
+    {
+      accessorKey: "price",
+      header: ({ column }) => (
+        <button onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="flex items-center gap-1 hover:text-foreground font-medium">
+          Price <ArrowUpDown className="h-3 w-3" />
+        </button>
+      ),
+      cell: ({ row }) => <span className="text-sm font-semibold">${parseFloat(row.getValue("price")).toFixed(2)}</span>
+    },
+    {
+      accessorKey: "stock",
+      header: ({ column }) => (
+        <button onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="flex items-center gap-1 hover:text-foreground font-medium">
+          Stock <ArrowUpDown className="h-3 w-3" />
+        </button>
+      ),
+      cell: ({ row }) => {
+        const stock = row.original.stock;
+        return (
+          <div>
+            <span className={`text-sm font-medium ${stock === 0 ? "text-rose-500" : "text-foreground"}`}>{stock}</span>
+            {stock === 0 && <span className="block text-[10px] text-rose-500 font-semibold leading-none">Out of stock</span>}
           </div>
-        ),
-        enableSorting: false
+        );
       }
-    ],
-    [handleOpenEdit, handleOpenDelete]
-  );
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge variant="outline" className={`capitalize text-[10px] border h-5 ${statusMap[row.original.status]}`}>
+          {row.original.status}
+        </Badge>
+      )
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1 pr-1">
+          <button onClick={() => handleOpenEdit(row.original)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-blue-600 transition-colors">
+            <Edit2 className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={() => handleOpenDelete(row.original)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-rose-600 transition-colors">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ),
+      enableSorting: false
+    }
+  ], [handleOpenEdit, handleOpenDelete]);
 
   const exportToCSV = () => {
     const headers = ["ID", "Name", "SKU", "Category", "Price", "Stock", "Status"];
@@ -339,17 +212,12 @@ export default function ProductsPage() {
       const p = row.original;
       return [p.id, p.name, p.sku, p.category, p.price, p.stock, p.status];
     });
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-    ].join("\n");
-
+    const csvContent = [headers.join(","), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `modfirst_products_${new Date().toISOString().split('T')[0]}.csv`);
+    link.href = url;
+    link.download = `products_${new Date().toISOString().split("T")[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -358,12 +226,7 @@ export default function ProductsPage() {
   const table = useReactTable({
     data: filteredProducts,
     columns,
-    state: {
-      sorting,
-      globalFilter,
-      columnFilters,
-      columnVisibility
-    },
+    state: { sorting, globalFilter, columnFilters, columnVisibility },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
@@ -372,494 +235,300 @@ export default function ProductsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 5
-      }
-    }
+    initialState: { pagination: { pageSize: 8 } }
   });
 
+  /* ---- compact form fields shared helper ---- */
+  const Field = ({ error, label, children }: { error?: string; label: string; children: React.ReactNode }) => (
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      {children}
+      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border/20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
-            Products
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your store products, pricing, stock levels, and status.
-          </p>
+          <h1 className="text-lg font-semibold text-foreground">Products</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage pricing, stock levels, and status</p>
         </div>
-        <Button onClick={handleOpenAdd} className="rounded-xl font-medium shadow-md shadow-primary/10">
-          <Plus className="h-4.5 w-4.5 mr-2" />
-          Add Product
+        <Button onClick={handleOpenAdd} size="sm" className="gap-1.5 shrink-0">
+          <Plus className="h-3.5 w-3.5" /> Add Product
         </Button>
       </div>
 
-      {/* Filters & Search Toolbar */}
-      <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1 max-w-2xl">
-          <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-4 w-4 text-muted-foreground" />
-            </span>
-            <Input
-              type="text"
-              placeholder="Search products by name or SKU..."
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-9 rounded-xl border-border/50 bg-card/40 backdrop-blur-sm focus-visible:ring-1"
-            />
-          </div>
-
-          <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || "all")}>
-            <SelectTrigger className="w-full sm:w-48 rounded-xl border-border/50 bg-card/40 backdrop-blur-sm">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c} value={c.toLowerCase()}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Toolbar */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+          </span>
+          <Input placeholder="Search products..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} className="pl-8" />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {isFiltered && (
-            <Button
-              variant="ghost"
-              onClick={handleResetFilters}
-              className="rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 flex items-center gap-1.5 font-semibold text-xs h-10 px-3 transition-colors"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Clear Filters
-            </Button>
-          )}
+        <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || "all")}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((c) => <SelectItem key={c} value={c.toLowerCase()}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
-          <Button
-            variant="outline"
-            onClick={() => setShowColumnFilters(!showColumnFilters)}
-            className={`rounded-xl border-border/50 backdrop-blur-sm flex items-center gap-2 text-xs font-semibold h-10 ${
-              showColumnFilters
-                ? "bg-primary/25 border-primary text-foreground hover:bg-primary/30"
-                : "bg-card/40 hover:bg-muted"
-            }`}
-          >
-            <Filter className="h-4 w-4" />
-            {showColumnFilters ? "Hide Filters" : "Column Filters"}
+        <Button variant="outline" size="sm" onClick={() => setShowColumnFilters(!showColumnFilters)} className={`gap-1.5 ${showColumnFilters ? "bg-primary/10 border-primary/40 text-foreground" : ""}`}>
+          <Filter className="h-3.5 w-3.5" />Filters
+        </Button>
+
+        {isFiltered && (
+          <Button variant="ghost" size="sm" onClick={() => { setGlobalFilter(""); setCategoryFilter("all"); setColumnFilters([]); }} className="gap-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20">
+            <RefreshCw className="h-3.5 w-3.5" />Clear
           </Button>
+        )}
 
-          {/* Column Visibility Dropdown */}
-          <div className="relative">
-            <Button
-              variant="outline"
-              onClick={() => setIsOpenColumns(!isOpenColumns)}
-              className="rounded-xl border-border/50 bg-card/40 backdrop-blur-sm flex items-center gap-2 text-xs font-semibold h-10 hover:bg-muted"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Columns
-            </Button>
-            {isOpenColumns && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsOpenColumns(false)} />
-                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-border/50 bg-popover p-3 shadow-lg z-20 space-y-1.5 text-popover-foreground">
-                  <p className="text-xs font-bold text-muted-foreground px-1 pb-1 border-b border-border/40 mb-1.5 select-none">
-                    Toggle Columns
-                  </p>
-                  {table.getAllLeafColumns().map((column) => {
-                    if (column.id === "actions" || column.id === "image") return null;
-                    return (
-                      <label
-                        key={column.id}
-                        className="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-muted text-xs font-semibold cursor-pointer select-none capitalize"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={column.getIsVisible()}
-                          onChange={column.getToggleVisibilityHandler()}
-                          className="rounded border-border/60 text-primary focus:ring-0 cursor-pointer h-3.5 w-3.5"
-                        />
-                        {column.id}
-                      </label>
-                    );
-                  })}
-                </div>
-              </>
+        <Button variant="outline" size="sm" onClick={exportToCSV} className="gap-1.5 ml-auto">
+          <Download className="h-3.5 w-3.5" />Export
+        </Button>
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="text-sm">Loading products...</span>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                <Package className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                <p className="text-sm font-medium text-foreground">No products found</p>
+                <p className="text-xs mt-0.5">Try relaxing your filters.</p>
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead>
+                  {table.getHeaderGroups().map((hg) => (
+                    <React.Fragment key={hg.id}>
+                      <tr className="border-b border-border bg-muted/40 text-muted-foreground">
+                        {hg.headers.map((header) => (
+                          <th key={header.id} className="px-3 py-2.5 text-xs font-medium first:pl-4 last:pr-4 select-none">
+                            {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                          </th>
+                        ))}
+                      </tr>
+                      {showColumnFilters && (
+                        <tr className="border-b border-border bg-muted/20">
+                          {hg.headers.map((header) => {
+                            const colId = header.column.id;
+                            return (
+                              <th key={`f-${colId}`} className="px-3 py-1.5 first:pl-4 last:pr-4">
+                                {colId === "image" || colId === "actions" ? null : colId === "category" || colId === "status" ? (
+                                  <select
+                                    value={(header.column.getFilterValue() as string) ?? ""}
+                                    onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                                    className="h-7 w-full text-xs bg-card border border-border rounded px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                  >
+                                    <option value="">All</option>
+                                    {colId === "category"
+                                      ? categories.map((c) => <option key={c} value={c}>{c}</option>)
+                                      : ["active", "draft", "archived"].map((s) => <option key={s} value={s}>{s}</option>)
+                                    }
+                                  </select>
+                                ) : (
+                                  <Input
+                                    placeholder={`Filter...`}
+                                    value={(header.column.getFilterValue() as string) ?? ""}
+                                    onChange={(e) => header.column.setFilterValue(e.target.value)}
+                                    className="h-7 text-xs"
+                                  />
+                                )}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-3 py-2.5 first:pl-4 last:pr-4 align-middle">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
 
-          <Button
-            variant="outline"
-            onClick={exportToCSV}
-            className="rounded-xl border-border/50 bg-card/40 backdrop-blur-sm flex items-center gap-2 text-xs font-semibold h-10 hover:bg-muted"
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      </div>
-
-      {/* Grid Container */}
-      <div className="rounded-2xl border border-border/40 bg-card/30 backdrop-blur-md overflow-hidden shadow-lg shadow-black/5">
-        <div className="overflow-x-auto">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center p-12 gap-3 text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span>Fetching product index...</span>
+          {/* Pagination */}
+          {!isLoading && filteredProducts.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2.5 border-t border-border bg-muted/20">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>
+                  <span className="font-medium text-foreground">{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span>–
+                  <span className="font-medium text-foreground">{Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, filteredProducts.length)}</span>
+                  {" "}of <span className="font-medium text-foreground">{filteredProducts.length}</span>
+                </span>
+                <div className="flex items-center gap-1.5 border-l border-border pl-3">
+                  Show
+                  <select
+                    value={table.getState().pagination.pageSize}
+                    onChange={(e) => table.setPageSize(Number(e.target.value))}
+                    className="h-6 bg-card border border-border rounded px-1.5 text-foreground focus:outline-none text-xs cursor-pointer"
+                  >
+                    {[8, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="h-7 gap-0.5 px-2">
+                  <ChevronLeft className="h-3.5 w-3.5" />Prev
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="h-7 gap-0.5 px-2">
+                  Next<ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-              <Package className="h-10 w-10 text-muted-foreground/50 mb-3" />
-              <h3 className="font-bold text-lg text-foreground mb-1">No products found</h3>
-              <p className="text-sm">Try relaxing your search terms or filters.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <React.Fragment key={headerGroup.id}>
-                    <tr className="border-b border-border/40 bg-muted/25 text-muted-foreground font-semibold">
-                      {headerGroup.headers.map((header) => (
-                        <th key={header.id} className="p-3 pl-4 first:pl-4 last:pr-4 text-xs select-none">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
-                    </tr>
-                    {showColumnFilters && (
-                      <tr className="border-b border-border/40 bg-muted/10">
-                        {headerGroup.headers.map((header) => {
-                          const colId = header.column.id;
-                          return (
-                            <th key={`filter-${colId}`} className="p-2 pl-4 first:pl-4 last:pr-4 bg-card/10 align-middle">
-                              {colId === "image" || colId === "actions" ? null : colId === "category" ? (
-                                <select
-                                  value={(header.column.getFilterValue() as string) ?? ""}
-                                  onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
-                                  className="h-9 w-full text-xs bg-card border border-border/50 rounded-lg px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                                >
-                                  <option value="">All</option>
-                                  {categories.map((c) => (
-                                    <option key={c} value={c}>
-                                      {c}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : colId === "status" ? (
-                                <select
-                                  value={(header.column.getFilterValue() as string) ?? ""}
-                                  onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
-                                  className="h-9 w-full text-xs bg-card border border-border/50 rounded-lg px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary capitalize font-medium"
-                                >
-                                  <option value="">All</option>
-                                  <option value="active">Active</option>
-                                  <option value="draft">Draft</option>
-                                  <option value="archived">Archived</option>
-                                </select>
-                              ) : (
-                                <Input
-                                  placeholder={`Filter ${colId.charAt(0).toUpperCase() + colId.slice(1)}...`}
-                                  value={(header.column.getFilterValue() as string) ?? ""}
-                                  onChange={(e) => header.column.setFilterValue(e.target.value)}
-                                  className="h-9 px-3 rounded-lg text-xs bg-card border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary"
-                                />
-                              )}
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </thead>
-              <tbody className="divide-y divide-border/20">
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-muted/10 transition-colors">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="p-3 pl-4 first:pl-4 last:pr-4 align-middle">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Pagination Toolbar */}
-        {!isLoading && filteredProducts.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border/30 bg-muted/5">
-            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground justify-center sm:justify-start">
-              <div>
-                Showing <span className="font-semibold text-foreground">{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span> to{" "}
-                <span className="font-semibold text-foreground">
-                  {Math.min(
-                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                    filteredProducts.length
-                  )}
-                </span>{" "}
-                of <span className="font-semibold text-foreground">{filteredProducts.length}</span> products
-              </div>
-              
-              <div className="flex items-center gap-1.5 sm:border-l sm:border-border/60 sm:pl-4">
-                <span>Show</span>
-                <select
-                  value={table.getState().pagination.pageSize}
-                  onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="h-8 bg-card border border-border/50 rounded-lg px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs font-semibold select-none cursor-pointer"
-                >
-                  {[5, 10, 20, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                <span>rows</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="h-9 rounded-xl font-semibold text-xs"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                className="h-9 rounded-xl font-semibold text-xs"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* --- ADD PRODUCT DIALOG --- */}
+      {/* ADD Dialog */}
       <Dialog open={isOpenAdd} onOpenChange={setIsOpenAdd}>
-        <DialogContent className="sm:max-w-[480px] rounded-2xl border-border/50">
-          <DialogHeader>
-            <DialogTitle className="font-black text-xl">Create New Product</DialogTitle>
-            <DialogDescription>Input product specifics. Click save to persist.</DialogDescription>
+        <DialogContent className="sm:max-w-[440px] rounded-lg border-border p-0">
+          <DialogHeader className="px-4 py-3 border-b border-border bg-muted/30">
+            <DialogTitle className="text-base font-semibold">Add Product</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">Fill in the product details below.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitAdd(onAddSubmit)} className="space-y-4 py-2">
-            <div className="grid gap-3">
-              <div>
-                <Label htmlFor="add-name" className="font-bold">Product Title</Label>
-                <Input id="add-name" {...registerAdd("name")} placeholder="e.g. Leather Wallet" className="mt-1" />
-                {errorsAdd.name && <p className="text-xs text-rose-500 font-medium mt-1">{errorsAdd.name.message}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="add-desc" className="font-bold">Description</Label>
-                <Input id="add-desc" {...registerAdd("description")} placeholder="Short description of core features..." className="mt-1" />
-                {errorsAdd.description && <p className="text-xs text-rose-500 font-medium mt-1">{errorsAdd.description.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="add-sku" className="font-bold">SKU Code</Label>
-                  <Input id="add-sku" {...registerAdd("sku")} placeholder="e.g. BG-LTH-02" className="mt-1" />
-                  {errorsAdd.sku && <p className="text-xs text-rose-500 font-medium mt-1">{errorsAdd.sku.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="add-cat" className="font-bold">Category</Label>
-                  <Input id="add-cat" {...registerAdd("category")} placeholder="e.g. Accessories" className="mt-1" />
-                  {errorsAdd.category && <p className="text-xs text-rose-500 font-medium mt-1">{errorsAdd.category.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="add-price" className="font-bold">Unit Price ($)</Label>
-                  <Input id="add-price" type="number" step="0.01" {...registerAdd("price", { valueAsNumber: true })} placeholder="0.00" className="mt-1" />
-                  {errorsAdd.price && <p className="text-xs text-rose-500 font-medium mt-1">{errorsAdd.price.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="add-stock" className="font-bold">Stock Count</Label>
-                  <Input id="add-stock" type="number" {...registerAdd("stock", { valueAsNumber: true })} placeholder="0" className="mt-1" />
-                  {errorsAdd.stock && <p className="text-xs text-rose-500 font-medium mt-1">{errorsAdd.stock.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="add-status" className="font-bold">Status</Label>
-                  <Select
-                    onValueChange={(val) => {
-                      if (val) setValueAdd("status", val as "active" | "draft" | "archived");
-                    }}
-                    defaultValue="active"
-                  >
-                    <SelectTrigger id="add-status" className="mt-1">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="add-img" className="font-bold">Image URL (Optional)</Label>
-                  <Input id="add-img" {...registerAdd("image")} placeholder="https://images..." className="mt-1" />
-                  {errorsAdd.image && <p className="text-xs text-rose-500 font-medium mt-1">{errorsAdd.image.message}</p>}
-                </div>
-              </div>
+          <form onSubmit={handleSubmitAdd(onAddSubmit)} className="p-4 space-y-3">
+            <Field label="Product Name" error={errorsAdd.name?.message}>
+              <Input {...registerAdd("name")} placeholder="e.g. DTF Transfer Sheet" />
+            </Field>
+            <Field label="Description" error={errorsAdd.description?.message}>
+              <Input {...registerAdd("description")} placeholder="Short product description" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="SKU" error={errorsAdd.sku?.message}>
+                <Input {...registerAdd("sku")} placeholder="SKU-001" />
+              </Field>
+              <Field label="Category" error={errorsAdd.category?.message}>
+                <Input {...registerAdd("category")} placeholder="e.g. DTF" />
+              </Field>
             </div>
-
-            <DialogFooter className="pt-4 border-t border-border/30 gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsOpenAdd(false)} disabled={addMutation.isPending}>
-                Cancel
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Price ($)" error={errorsAdd.price?.message}>
+                <Input type="number" step="0.01" {...registerAdd("price", { valueAsNumber: true })} placeholder="0.00" />
+              </Field>
+              <Field label="Stock" error={errorsAdd.stock?.message}>
+                <Input type="number" {...registerAdd("stock", { valueAsNumber: true })} placeholder="0" />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Status">
+                <Select onValueChange={(val) => { if (val) setValueAdd("status", val as "active" | "draft" | "archived"); }} defaultValue="active">
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Image URL" error={errorsAdd.image?.message}>
+                <Input {...registerAdd("image")} placeholder="https://..." />
+              </Field>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-border mt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsOpenAdd(false)} disabled={addMutation.isPending}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={addMutation.isPending}>
+                {addMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving...</> : "Create Product"}
               </Button>
-              <Button type="submit" disabled={addMutation.isPending} className="shadow-md shadow-primary/10">
-                {addMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Create Product"
-                )}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* --- EDIT PRODUCT DIALOG --- */}
+      {/* EDIT Dialog */}
       <Dialog open={isOpenEdit} onOpenChange={setIsOpenEdit}>
-        <DialogContent className="sm:max-w-[480px] rounded-2xl border-border/50">
-          <DialogHeader>
-            <DialogTitle className="font-black text-xl">Modify Product</DialogTitle>
-            <DialogDescription>Modify fields and click save to apply updates.</DialogDescription>
+        <DialogContent className="sm:max-w-[440px] rounded-lg border-border p-0">
+          <DialogHeader className="px-4 py-3 border-b border-border bg-muted/30">
+            <DialogTitle className="text-base font-semibold">Edit Product</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">Update the product details below.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitEdit(onEditSubmit)} className="space-y-4 py-2">
-            <div className="grid gap-3">
-              <div>
-                <Label htmlFor="edit-name" className="font-bold">Product Title</Label>
-                <Input id="edit-name" {...registerEdit("name")} placeholder="e.g. Leather Wallet" className="mt-1" />
-                {errorsEdit.name && <p className="text-xs text-rose-500 font-medium mt-1">{errorsEdit.name.message}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="edit-desc" className="font-bold">Description</Label>
-                <Input id="edit-desc" {...registerEdit("description")} placeholder="Short description of core features..." className="mt-1" />
-                {errorsEdit.description && <p className="text-xs text-rose-500 font-medium mt-1">{errorsEdit.description.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="edit-sku" className="font-bold">SKU Code</Label>
-                  <Input id="edit-sku" {...registerEdit("sku")} placeholder="e.g. BG-LTH-02" className="mt-1" />
-                  {errorsEdit.sku && <p className="text-xs text-rose-500 font-medium mt-1">{errorsEdit.sku.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="edit-cat" className="font-bold">Category</Label>
-                  <Input id="edit-cat" {...registerEdit("category")} placeholder="e.g. Accessories" className="mt-1" />
-                  {errorsEdit.category && <p className="text-xs text-rose-500 font-medium mt-1">{errorsEdit.category.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="edit-price" className="font-bold">Unit Price ($)</Label>
-                  <Input id="edit-price" type="number" step="0.01" {...registerEdit("price", { valueAsNumber: true })} placeholder="0.00" className="mt-1" />
-                  {errorsEdit.price && <p className="text-xs text-rose-500 font-medium mt-1">{errorsEdit.price.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="edit-stock" className="font-bold">Stock Count</Label>
-                  <Input id="edit-stock" type="number" {...registerEdit("stock", { valueAsNumber: true })} placeholder="0" className="mt-1" />
-                  {errorsEdit.stock && <p className="text-xs text-rose-500 font-medium mt-1">{errorsEdit.stock.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="edit-status" className="font-bold">Status</Label>
-                  <Select
-                    onValueChange={(val) => {
-                      if (val) setValueEdit("status", val as "active" | "draft" | "archived");
-                    }}
-                    value={watchEdit("status") || "active"}
-                  >
-                    <SelectTrigger id="edit-status" className="mt-1">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-img" className="font-bold">Image URL (Optional)</Label>
-                  <Input id="edit-img" {...registerEdit("image")} placeholder="https://images..." className="mt-1" />
-                  {errorsEdit.image && <p className="text-xs text-rose-500 font-medium mt-1">{errorsEdit.image.message}</p>}
-                </div>
-              </div>
+          <form onSubmit={handleSubmitEdit(onEditSubmit)} className="p-4 space-y-3">
+            <Field label="Product Name" error={errorsEdit.name?.message}>
+              <Input {...registerEdit("name")} placeholder="e.g. DTF Transfer Sheet" />
+            </Field>
+            <Field label="Description" error={errorsEdit.description?.message}>
+              <Input {...registerEdit("description")} placeholder="Short product description" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="SKU" error={errorsEdit.sku?.message}>
+                <Input {...registerEdit("sku")} placeholder="SKU-001" />
+              </Field>
+              <Field label="Category" error={errorsEdit.category?.message}>
+                <Input {...registerEdit("category")} placeholder="e.g. DTF" />
+              </Field>
             </div>
-
-            <DialogFooter className="pt-4 border-t border-border/30 gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsOpenEdit(false)} disabled={updateMutation.isPending}>
-                Cancel
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Price ($)" error={errorsEdit.price?.message}>
+                <Input type="number" step="0.01" {...registerEdit("price", { valueAsNumber: true })} placeholder="0.00" />
+              </Field>
+              <Field label="Stock" error={errorsEdit.stock?.message}>
+                <Input type="number" {...registerEdit("stock", { valueAsNumber: true })} placeholder="0" />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Status">
+                <Select onValueChange={(val) => { if (val) setValueEdit("status", val as "active" | "draft" | "archived"); }} value={watchEdit("status") || "active"}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Image URL" error={errorsEdit.image?.message}>
+                <Input {...registerEdit("image")} placeholder="https://..." />
+              </Field>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-border mt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsOpenEdit(false)} disabled={updateMutation.isPending}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving...</> : "Save Changes"}
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending} className="shadow-md shadow-primary/10">
-                {updateMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* --- DELETE CONFIRMATION DIALOG --- */}
+      {/* DELETE Dialog */}
       <Dialog open={isOpenDelete} onOpenChange={setIsOpenDelete}>
-        <DialogContent className="sm:max-w-[400px] rounded-2xl border-border/50">
-          <DialogHeader className="flex flex-col items-center text-center">
-            <div className="h-12 w-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mb-3">
-              <AlertTriangle className="h-6 w-6" />
+        <DialogContent className="sm:max-w-[360px] rounded-lg border-border p-0">
+          <div className="p-4 flex flex-col items-center text-center">
+            <div className="h-10 w-10 rounded-full bg-rose-100 dark:bg-rose-950/20 flex items-center justify-center text-rose-600 mb-3">
+              <AlertTriangle className="h-5 w-5" />
             </div>
-            <DialogTitle className="font-black text-lg text-foreground">Confirm Deletion</DialogTitle>
-            <DialogDescription className="text-sm">
-              Are you sure you want to permanently delete{" "}
-              <span className="font-bold text-foreground">&quot;{selectedProduct?.name}&quot;</span>? This action is permanent.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center gap-2 pt-2 border-t border-border/20 mt-4">
-            <Button variant="outline" onClick={() => setIsOpenDelete(false)} disabled={deleteMutation.isPending} className="rounded-lg">
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={onDeleteConfirm} disabled={deleteMutation.isPending} className="rounded-lg">
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Product"
-              )}
+            <h3 className="text-base font-semibold text-foreground">Delete product?</h3>
+            <p className="text-xs text-muted-foreground mt-1.5 max-w-xs">
+              <strong className="text-foreground">&quot;{selectedProduct?.name}&quot;</strong> will be permanently removed. This cannot be undone.
+            </p>
+          </div>
+          <DialogFooter className="px-4 py-3 border-t border-border bg-muted/20 flex gap-2 sm:justify-center">
+            <Button variant="outline" size="sm" onClick={() => setIsOpenDelete(false)} disabled={deleteMutation.isPending}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={onDeleteConfirm} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Deleting...</> : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

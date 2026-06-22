@@ -49,37 +49,38 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  /* Shopify-style neutral palette */
+  --background: oklch(0.968 0 0);      /* #f6f6f7 page surface */
+  --foreground: oklch(0.13 0 0);       /* #1c1c1c primary text */
+  --card: oklch(1 0 0);                /* white card surface */
+  --card-foreground: oklch(0.13 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.13 0 0);
   --primary: oklch(0.8567 0.2013 119.29);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.13 0 0);
+  --secondary: oklch(0.95 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted: oklch(0.95 0 0);
+  --muted-foreground: oklch(0.46 0 0);  /* #6d7175 */
+  --accent: oklch(0.95 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.886 0 0);           /* #e1e3e5 visible but subtle */
+  --input: oklch(0.886 0 0);
   --ring: var(--primary);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --radius: 0.375rem;                   /* 6px — Shopify-compact corners */
+  --sidebar: oklch(1 0 0);             /* white sidebar */
+  --sidebar-foreground: oklch(0.13 0 0);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.95 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-border: oklch(0.886 0 0);
   --sidebar-ring: var(--primary);
 }
 

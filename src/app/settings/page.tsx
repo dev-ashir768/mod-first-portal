@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ReactSelect } from "@/components/ui/react-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -116,20 +116,18 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="currency">Currency</Label>
-                    <Select
-                      onValueChange={(val) => { if (val) setValue("currency", val, { shouldDirty: true }); }}
-                      value={watch("currency") || "USD"}
-                    >
-                      <SelectTrigger id="currency" className="w-full">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USD">USD ($) — US Dollar</SelectItem>
-                        <SelectItem value="EUR">EUR (€) — Euro</SelectItem>
-                        <SelectItem value="GBP">GBP (£) — British Pound</SelectItem>
-                        <SelectItem value="JPY">JPY (¥) — Japanese Yen</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <ReactSelect
+                      options={[
+                        { value: "USD", label: "USD ($) — US Dollar" },
+                        { value: "EUR", label: "EUR (€) — Euro" },
+                        { value: "GBP", label: "GBP (£) — British Pound" },
+                        { value: "JPY", label: "JPY (¥) — Japanese Yen" },
+                      ]}
+                      value={{ value: watch("currency") || "USD", label: { USD: "USD ($) — US Dollar", EUR: "EUR (€) — Euro", GBP: "GBP (£) — British Pound", JPY: "JPY (¥) — Japanese Yen" }[watch("currency") || "USD"] }}
+                      onChange={(opt) => { if (opt) setValue("currency", (opt as { value: string }).value, { shouldDirty: true }); }}
+                      isSearchable={false}
+                      inputId="currency"
+                    />
                   </div>
 
                   <div className="space-y-1.5">

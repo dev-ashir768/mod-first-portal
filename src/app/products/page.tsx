@@ -19,9 +19,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ReactSelect } from "@/components/ui/react-select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const statusMap = {
   active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/50",
@@ -193,14 +194,33 @@ export default function ProductsPage() {
       id: "actions",
       header: "",
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1 pr-1">
-          <button onClick={() => handleOpenEdit(row.original)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-blue-600 transition-colors">
-            <Edit2 className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={() => handleOpenDelete(row.original)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-rose-600 transition-colors">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex items-center justify-end gap-0.5 pr-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => handleOpenEdit(row.original)}
+                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Edit product</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => handleOpenDelete(row.original)}
+                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Delete product</TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
       ),
       enableSorting: false
     }
@@ -269,15 +289,17 @@ export default function ProductsPage() {
           <Input placeholder="Search products..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} className="pl-8" />
         </div>
 
-        <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || "all")}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((c) => <SelectItem key={c} value={c.toLowerCase()}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <ReactSelect
+          className="w-40"
+          options={[
+            { value: "all", label: "All Categories" },
+            ...categories.map((c) => ({ value: c.toLowerCase(), label: c }))
+          ]}
+          value={{ value: categoryFilter, label: categoryFilter === "all" ? "All Categories" : categories.find(c => c.toLowerCase() === categoryFilter) || categoryFilter }}
+          onChange={(opt) => setCategoryFilter((opt as { value: string })?.value || "all")}
+          placeholder="All Categories"
+          isSearchable={false}
+        />
 
         <Button variant="outline" size="sm" onClick={() => setShowColumnFilters(!showColumnFilters)} className={`gap-1.5 ${showColumnFilters ? "bg-primary/10 border-primary/40 text-foreground" : ""}`}>
           <Filter className="h-3.5 w-3.5" />Filters
@@ -435,14 +457,16 @@ export default function ProductsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Status">
-                <Select onValueChange={(val) => { if (val) setValueAdd("status", val as "active" | "draft" | "archived"); }} defaultValue="active">
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ReactSelect
+                  options={[
+                    { value: "active", label: "Active" },
+                    { value: "draft", label: "Draft" },
+                    { value: "archived", label: "Archived" },
+                  ]}
+                  defaultValue={{ value: "active", label: "Active" }}
+                  onChange={(opt) => { if (opt) setValueAdd("status", (opt as { value: string }).value as "active" | "draft" | "archived"); }}
+                  isSearchable={false}
+                />
               </Field>
               <Field label="Image URL" error={errorsAdd.image?.message}>
                 <Input {...registerAdd("image")} placeholder="https://..." />
@@ -490,14 +514,16 @@ export default function ProductsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Status">
-                <Select onValueChange={(val) => { if (val) setValueEdit("status", val as "active" | "draft" | "archived"); }} value={watchEdit("status") || "active"}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ReactSelect
+                  options={[
+                    { value: "active", label: "Active" },
+                    { value: "draft", label: "Draft" },
+                    { value: "archived", label: "Archived" },
+                  ]}
+                  value={{ value: watchEdit("status") || "active", label: watchEdit("status") ? watchEdit("status").charAt(0).toUpperCase() + watchEdit("status").slice(1) : "Active" }}
+                  onChange={(opt) => { if (opt) setValueEdit("status", (opt as { value: string }).value as "active" | "draft" | "archived"); }}
+                  isSearchable={false}
+                />
               </Field>
               <Field label="Image URL" error={errorsEdit.image?.message}>
                 <Input {...registerEdit("image")} placeholder="https://..." />

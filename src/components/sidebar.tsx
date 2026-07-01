@@ -14,7 +14,7 @@ import {
   Moon,
   LogOut
 } from "lucide-react";
-import { useStore } from "@/store/useStore";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -155,7 +155,7 @@ export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarP
         </button>
 
         <button
-          onClick={() => useStore.getState().logout()}
+          onClick={() => useAuthStore.getState().clearAuth()}
           className={`flex items-center transition-colors w-full h-8 overflow-hidden rounded text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 ${
             collapsed ? "px-2 justify-center" : "px-2.5"
           }`}

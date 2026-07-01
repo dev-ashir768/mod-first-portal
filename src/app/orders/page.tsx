@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ReactSelect } from "@/components/ui/react-select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type FilterStatus = "all" | Order["status"];
 
@@ -173,10 +174,19 @@ export default function OrdersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          <Button variant="outline" size="sm" onClick={() => handleOpenDetails(order)} className="h-7 text-xs gap-1">
-                            <Eye className="h-3 w-3" />
-                            View
-                          </Button>
+                          <TooltipProvider delayDuration={300}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleOpenDetails(order)}
+                                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">View order</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </td>
                       </tr>
                     );
@@ -260,21 +270,20 @@ export default function OrdersPage() {
                 Update Status
               </Label>
               <div className="flex items-center gap-2 mt-1">
-                <Select
-                  value={selectedOrder?.status}
-                  onValueChange={(val) => { if (val) handleStatusChange(val as Order["status"]); }}
-                  disabled={updateStatusMutation.isPending}
-                >
-                  <SelectTrigger id="order-status" className="flex-1">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ReactSelect
+                  className="flex-1"
+                  options={[
+                    { value: "pending", label: "Pending" },
+                    { value: "processing", label: "Processing" },
+                    { value: "completed", label: "Completed" },
+                    { value: "cancelled", label: "Cancelled" },
+                  ]}
+                  value={selectedOrder ? { value: selectedOrder.status, label: selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1) } : null}
+                  onChange={(opt) => { if (opt) handleStatusChange((opt as { value: string }).value as Order["status"]); }}
+                  isDisabled={updateStatusMutation.isPending}
+                  isSearchable={false}
+                  inputId="order-status"
+                />
                 {updateStatusMutation.isPending && <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />}
               </div>
             </div>

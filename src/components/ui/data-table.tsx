@@ -241,7 +241,7 @@ export function DataTable<TData, TValue = unknown>({
       </div>
 
       {/* ── Table ── */}
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className="rounded-lg overflow-hidden polaris-card">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (

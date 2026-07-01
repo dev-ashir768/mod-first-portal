@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Menu as MenuIcon, Plus, Edit2, Trash2, Loader2, AlertTriangle,
   ChevronDown, ChevronRight, Shield, Eye, PenLine, FilePlus, ShieldOff,
-  ToggleLeft, ToggleRight, ExternalLink, Globe, Layout,
+  ExternalLink, Globe, Layout,
 } from "lucide-react";
 import {
   useMenusQuery, useCreateMenuMutation, useUpdateMenuMutation,
@@ -20,6 +20,7 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/store/useToast";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 /* ── Constants ── */
 const ROLES = [
@@ -91,14 +94,12 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function PermToggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
-    <button
-      type="button"
+    <Switch
+      checked={checked}
+      onCheckedChange={onChange}
       disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`h-5 w-9 rounded-full transition-colors relative shrink-0 disabled:opacity-40 ${checked ? "bg-primary" : "bg-muted-foreground/30"}`}
-    >
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
-    </button>
+      size="sm"
+    />
   );
 }
 
@@ -107,7 +108,7 @@ function PermToggle({ checked, onChange, disabled }: { checked: boolean; onChang
 ══════════════════════════════════════ */
 function MenusTab() {
   const { canCreate, canEdit, canDelete } = usePermissions("menus");
-  const { data, isLoading, isError } = useMenusQuery();
+  const { data, isLoading, isError, refetch, isFetching } = useMenusQuery();
   const createMutation = useCreateMenuMutation();
   const updateMutation = useUpdateMenuMutation();
   const deleteMutation = useDeleteMenuMutation();
@@ -181,6 +182,90 @@ function MenusTab() {
     });
   };
 
+  const menuColumns = useMemo<ColumnDef<Menu>[]>(() => [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          {row.original.parent_id && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+          <div>
+            <p className="font-medium text-xs text-foreground">{row.original.name}</p>
+            {row.original.icon && <p className="text-[10px] text-muted-foreground">{row.original.icon}</p>}
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "slug",
+      header: "Slug",
+      cell: ({ row }) => <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{row.original.slug}</code>,
+    },
+    {
+      accessorKey: "menu_type",
+      header: "Type",
+      cell: ({ row }) => (
+        <Badge variant="outline" className={`text-[10px] h-5 capitalize ${row.original.menu_type === "backend" ? "border-indigo-200 text-indigo-700 bg-indigo-50 dark:bg-indigo-950/20" : "border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20"}`}>
+          {row.original.menu_type === "backend" ? <Layout className="h-2.5 w-2.5 mr-1" /> : <Globe className="h-2.5 w-2.5 mr-1" />}
+          {row.original.menu_type}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "link_type",
+      header: "Link",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          {row.original.link_type === "external_url" ? <ExternalLink className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          <span className="capitalize">{row.original.link_type.replace("_", " ")}</span>
+          {row.original.link_value && <span className="text-foreground">· {row.original.link_value}</span>}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      cell: ({ row }) => (
+        <button onClick={() => onToggle(row.original)} disabled={toggleMutation.isPending} className="focus:outline-none">
+          {row.original.is_active
+            ? <Badge variant="outline" className="text-[10px] h-5 border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 cursor-pointer">Active</Badge>
+            : <Badge variant="outline" className="text-[10px] h-5 border-muted text-muted-foreground cursor-pointer">Inactive</Badge>}
+        </button>
+      ),
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => (
+        <TooltipProvider>
+          <div className="flex items-center justify-end gap-1">
+            {canEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" onClick={() => { setSelected(row.original); setIsOpenEdit(true); }}>
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit</TooltipContent>
+              </Tooltip>
+            )}
+            {canDelete && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" className="text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20" onClick={() => { setSelected(row.original); setIsOpenDelete(true); }}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
+      ),
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [canEdit, canDelete, toggleMutation.isPending]);
+
   return (
     <>
       <div className="flex items-center justify-between mb-3">
@@ -192,12 +277,6 @@ function MenusTab() {
         )}
       </div>
 
-      {isLoading && (
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
-        </div>
-      )}
-
       {isError && (
         <div className="flex flex-col items-center py-12 text-muted-foreground gap-2">
           <AlertTriangle className="h-8 w-8 text-amber-400" />
@@ -205,92 +284,19 @@ function MenusTab() {
         </div>
       )}
 
-      {!isLoading && !isError && menus.length === 0 && (
-        <div className="flex flex-col items-center py-16 gap-3 text-muted-foreground">
-          <MenuIcon className="h-10 w-10 opacity-30" />
-          <p className="text-sm">No menus yet. Create your first menu.</p>
-        </div>
-      )}
-
-      {!isLoading && menus.length > 0 && (
-        <div className="border border-border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="px-3 text-xs font-semibold text-muted-foreground">Name</TableHead>
-                <TableHead className="px-3 text-xs font-semibold text-muted-foreground hidden sm:table-cell">Slug</TableHead>
-                <TableHead className="px-3 text-xs font-semibold text-muted-foreground hidden md:table-cell">Type</TableHead>
-                <TableHead className="px-3 text-xs font-semibold text-muted-foreground hidden lg:table-cell">Link</TableHead>
-                <TableHead className="px-3 text-xs font-semibold text-muted-foreground">Status</TableHead>
-                <TableHead className="px-3 text-xs font-semibold text-muted-foreground text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {menus.map((menu, idx) => (
-                <TableRow key={menu.id} className={`last:border-0 ${idx % 2 === 0 ? "" : "bg-muted/10"}`}>
-                  <TableCell className="px-3 py-2.5">
-                    <div className="flex items-center gap-2">
-                      {menu.parent_id && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                      <div>
-                        <p className="font-medium text-xs text-foreground">{menu.name}</p>
-                        {menu.icon && <p className="text-[10px] text-muted-foreground">{menu.icon}</p>}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-3 py-2.5 hidden sm:table-cell">
-                    <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{menu.slug}</code>
-                  </TableCell>
-                  <TableCell className="px-3 py-2.5 hidden md:table-cell">
-                    <Badge variant="outline" className={`text-[10px] h-5 capitalize ${menu.menu_type === "backend" ? "border-indigo-200 text-indigo-700 bg-indigo-50 dark:bg-indigo-950/20" : "border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20"}`}>
-                      {menu.menu_type === "backend" ? <Layout className="h-2.5 w-2.5 mr-1" /> : <Globe className="h-2.5 w-2.5 mr-1" />}
-                      {menu.menu_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="px-3 py-2.5 hidden lg:table-cell">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      {menu.link_type === "external_url" ? <ExternalLink className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                      <span className="capitalize">{menu.link_type.replace("_", " ")}</span>
-                      {menu.link_value && <span className="text-foreground">· {menu.link_value}</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-3 py-2.5">
-                    <button onClick={() => onToggle(menu)} disabled={toggleMutation.isPending} className="focus:outline-none">
-                      {menu.is_active
-                        ? <Badge variant="outline" className="text-[10px] h-5 border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 cursor-pointer">Active</Badge>
-                        : <Badge variant="outline" className="text-[10px] h-5 border-muted text-muted-foreground cursor-pointer">Inactive</Badge>}
-                    </button>
-                  </TableCell>
-                  <TableCell className="px-3 py-2.5">
-                    <TooltipProvider>
-                      <div className="flex items-center justify-end gap-1">
-                        {canEdit && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon-sm" onClick={() => { setSelected(menu); setIsOpenEdit(true); }}>
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Edit</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {canDelete && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon-sm" className="text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20" onClick={() => { setSelected(menu); setIsOpenDelete(true); }}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Delete</TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </TooltipProvider>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+      {!isError && (
+        <DataTable
+          columns={menuColumns}
+          data={menus}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          onRefetch={refetch}
+          exportFilename="menus"
+          searchPlaceholder="Search menus..."
+          emptyIcon={<MenuIcon className="h-8 w-8" />}
+          emptyText="No menus yet. Create your first menu."
+          pageSize={10}
+        />
       )}
 
       {/* ── Add Dialog ── */}

@@ -4,23 +4,19 @@ import React, { useState, useMemo } from "react";
 import { useOrders, useUpdateOrderStatus, useSettings } from "@/hooks/useMockData";
 import { Order } from "@/store/useStore";
 import { useToast } from "@/store/useToast";
+import { ColumnDef } from "@tanstack/react-table";
 import {
-  useReactTable, getCoreRowModel, ColumnDef, flexRender
-} from "@tanstack/react-table";
-import {
-  Search, Eye, ShoppingCart, Calendar, User, Mail,
+  Eye, ShoppingCart, Calendar, User, Mail,
   Loader2, Clock, CheckCircle2, XCircle, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ReactSelect } from "@/components/ui/react-select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable } from "@/components/ui/data-table";
 
 type FilterStatus = "all" | Order["status"];
 
@@ -46,20 +42,12 @@ export default function OrdersPage() {
   const { addToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<FilterStatus>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isOpenDetails, setIsOpenDetails] = useState(false);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
-      const matchesTab = activeTab === "all" || o.status === activeTab;
-      const matchesSearch =
-        o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.customerEmail.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesSearch;
-    });
-  }, [orders, activeTab, searchQuery]);
+    return orders.filter((o) => activeTab === "all" || o.status === activeTab);
+  }, [orders, activeTab]);
 
   const handleOpenDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -154,11 +142,6 @@ export default function OrdersPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [canView, formatCurrency]);
 
-  const table = useReactTable({
-    data: filteredOrders,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
   const orderDetailsBreakdown = useMemo(() => {
     if (!selectedOrder) return { subtotal: 0, tax: 0, total: 0 };
     const subtotal = selectedOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -191,63 +174,16 @@ export default function OrdersPage() {
         </TabsList>
       </Tabs>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-          <Search className="h-3.5 w-3.5 text-muted-foreground" />
-        </span>
-        <Input
-          placeholder="Search by order ID or customer..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-8"
-        />
-      </div>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="text-sm">Loading orders...</span>
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                <ShoppingCart className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                <p className="text-sm font-medium text-foreground">No orders found</p>
-                <p className="text-xs mt-0.5">Try a different filter or search term.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((hg) => (
-                    <TableRow key={hg.id} className="bg-muted/40 hover:bg-muted/40">
-                      {hg.headers.map((header) => (
-                        <TableHead key={header.id} className="px-3 text-xs font-medium text-muted-foreground">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-3 py-2.5">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* DataTable */}
+      <DataTable
+        columns={columns}
+        data={filteredOrders}
+        isLoading={isLoading}
+        exportFilename="orders"
+        searchPlaceholder="Search by order ID or customer..."
+        emptyIcon={<ShoppingCart className="h-8 w-8" />}
+        emptyText="No orders found. Try a different filter."
+      />
 
       {/* Order Details Dialog */}
       <Dialog open={isOpenDetails} onOpenChange={setIsOpenDetails}>

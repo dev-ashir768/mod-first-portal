@@ -2,26 +2,15 @@
 
 import React, { useState, useMemo } from "react";
 import { useCustomers, useSettings } from "@/hooks/useMockData";
-import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, ColumnDef, flexRender, SortingState } from "@tanstack/react-table";
-import { Search, Users, Calendar, Mail, Loader2, DollarSign, Award, Sparkles, ShoppingBag } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
+import { Users, Calendar, Mail, DollarSign, Award, Sparkles, ShoppingBag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 
 export default function CustomersPage() {
-  const { data: customers = [], isLoading } = useCustomers();
+  const { data: customers = [], isLoading, refetch, isFetching } = useCustomers();
   const { data: settings } = useSettings();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sorting, setSorting] = useState<SortingState>([]);
-
-  const filteredCustomers = useMemo(() => {
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [customers, searchQuery]);
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: settings?.currency || "USD" }).format(val);
@@ -40,7 +29,7 @@ export default function CustomersPage() {
   }, [customers]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const columns = useMemo<ColumnDef<any>[]>(() => [
+  const columns = useMemo<ColumnDef<any>[]>(() => [ // eslint-disable-line react-hooks/exhaustive-deps
     {
       accessorKey: "name",
       header: "Customer",
@@ -106,18 +95,7 @@ export default function CustomersPage() {
         );
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [formatCurrency]);
-
-  const table = useReactTable({
-    data: filteredCustomers,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
 
   return (
     <div className="space-y-4">
@@ -185,62 +163,18 @@ export default function CustomersPage() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-          <Search className="h-3.5 w-3.5 text-muted-foreground" />
-        </span>
-        <Input
-          placeholder="Search by name or email..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-8"
-        />
-      </div>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="text-sm">Loading customers...</span>
-              </div>
-            ) : filteredCustomers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-                <Users className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                <p className="text-sm font-medium text-foreground">No customers found</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((hg) => (
-                    <TableRow key={hg.id} className="bg-muted/40 hover:bg-muted/40">
-                      {hg.headers.map((header) => (
-                        <TableHead key={header.id} className="px-3 text-xs font-medium text-muted-foreground">
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-3 py-2.5">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* DataTable */}
+      <DataTable
+        columns={columns}
+        data={customers}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        onRefetch={refetch}
+        exportFilename="customers"
+        searchPlaceholder="Search by name or email..."
+        emptyIcon={<Users className="h-8 w-8" />}
+        emptyText="No customers found."
+      />
     </div>
   );
 }

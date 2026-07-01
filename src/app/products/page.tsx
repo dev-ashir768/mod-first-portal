@@ -7,13 +7,10 @@ import { productSchema, ProductFormValues } from "@/lib/schema";
 import { useToast } from "@/store/useToast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ColumnDef } from "@tanstack/react-table";
 import {
-  useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel,
-  getPaginationRowModel, ColumnDef, flexRender, SortingState, ColumnFiltersState, VisibilityState
-} from "@tanstack/react-table";
-import {
-  Search, Plus, Edit2, Trash2, Package, FolderOpen, ArrowUpDown,
-  ChevronLeft, ChevronRight, Loader2, AlertTriangle, Download, RefreshCw, Filter
+  Plus, Edit2, Trash2, Package, FolderOpen, ArrowUpDown,
+  Loader2, AlertTriangle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,11 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ReactSelect } from "@/components/ui/react-select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FileUpload } from "@/components/ui/file-upload";
 import { usePermissions } from "@/hooks/usePermissions";
+import { DataTable } from "@/components/ui/data-table";
 
 const statusMap = {
   active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/50",
@@ -41,14 +37,7 @@ export default function ProductsPage() {
   const deleteMutation = useDeleteProduct();
   const { addToast } = useToast();
 
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [showColumnFilters, setShowColumnFilters] = useState(false);
-
-  const isFiltered = globalFilter !== "" || categoryFilter !== "all" || columnFilters.length > 0;
 
   const [isOpenAdd, setIsOpenAdd] = useState(false);
   const [isOpenEdit, setIsOpenEdit] = useState(false);
@@ -227,37 +216,6 @@ export default function ProductsPage() {
     }
   ], [handleOpenEdit, handleOpenDelete, canEdit, canDelete]);
 
-  const exportToCSV = () => {
-    const headers = ["ID", "Name", "SKU", "Category", "Price", "Stock", "Status"];
-    const rows = table.getFilteredRowModel().rows.map(row => {
-      const p = row.original;
-      return [p.id, p.name, p.sku, p.category, p.price, p.stock, p.status];
-    });
-    const csvContent = [headers.join(","), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `products_${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const table = useReactTable({
-    data: filteredProducts,
-    columns,
-    state: { sorting, globalFilter, columnFilters, columnVisibility },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 8 } }
-  });
 
   /* ---- compact form fields shared helper ---- */
   const Field = ({ error, label, children }: { error?: string; label: string; children: React.ReactNode }) => (
@@ -283,150 +241,30 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-            <Search className="h-3.5 w-3.5 text-muted-foreground" />
-          </span>
-          <Input placeholder="Search products..." value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} className="pl-8" />
-        </div>
-
-        <ReactSelect
-          className="w-40"
-          options={[
-            { value: "all", label: "All Categories" },
-            ...categories.map((c) => ({ value: c.toLowerCase(), label: c }))
-          ]}
-          value={{ value: categoryFilter, label: categoryFilter === "all" ? "All Categories" : categories.find(c => c.toLowerCase() === categoryFilter) || categoryFilter }}
-          onChange={(opt) => setCategoryFilter((opt as { value: string })?.value || "all")}
-          placeholder="All Categories"
-          isSearchable={false}
-        />
-
-        <Button variant="outline" size="sm" onClick={() => setShowColumnFilters(!showColumnFilters)} className={`gap-1.5 ${showColumnFilters ? "bg-primary/10 border-primary/40 text-foreground" : ""}`}>
-          <Filter className="h-3.5 w-3.5" />Filters
-        </Button>
-
-        {isFiltered && (
-          <Button variant="ghost" size="sm" onClick={() => { setGlobalFilter(""); setCategoryFilter("all"); setColumnFilters([]); }} className="gap-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20">
-            <RefreshCw className="h-3.5 w-3.5" />Clear
-          </Button>
-        )}
-
-        <Button variant="outline" size="sm" onClick={exportToCSV} className="gap-1.5 ml-auto">
-          <Download className="h-3.5 w-3.5" />Export
-        </Button>
-      </div>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="text-sm">Loading products...</span>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-                <Package className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                <p className="text-sm font-medium text-foreground">No products found</p>
-                <p className="text-xs mt-0.5">Try relaxing your filters.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((hg) => (
-                    <React.Fragment key={hg.id}>
-                      <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        {hg.headers.map((header) => (
-                          <TableHead key={header.id} className="px-3 text-xs font-medium text-muted-foreground select-none">
-                            {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                      {showColumnFilters && (
-                        <TableRow className="bg-muted/20 hover:bg-muted/20">
-                          {hg.headers.map((header) => {
-                            const colId = header.column.id;
-                            return (
-                              <TableHead key={`f-${colId}`} className="px-3 py-1.5">
-                                {colId === "image" || colId === "actions" ? null : colId === "category" || colId === "status" ? (
-                                  <ReactSelect
-                                    options={[
-                                      { value: "", label: "All" },
-                                      ...(colId === "category"
-                                        ? categories.map((c) => ({ value: c, label: c }))
-                                        : ["active", "draft", "archived"].map((s) => ({ value: s, label: s })))
-                                    ]}
-                                    value={{ value: (header.column.getFilterValue() as string) ?? "", label: (header.column.getFilterValue() as string) || "All" }}
-                                    onChange={(opt) => header.column.setFilterValue((opt as { value: string })?.value || undefined)}
-                                    isSearchable={false}
-                                  />
-                                ) : (
-                                  <Input
-                                    placeholder="Filter..."
-                                    value={(header.column.getFilterValue() as string) ?? ""}
-                                    onChange={(e) => header.column.setFilterValue(e.target.value)}
-                                    className="h-7 text-xs"
-                                  />
-                                )}
-                              </TableHead>
-                            );
-                          })}
-                        </TableRow>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-3 py-2.5">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-
-          {/* Pagination */}
-          {!isLoading && filteredProducts.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-2.5 border-t border-border bg-muted/20">
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>
-                  <span className="font-medium text-foreground">{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span>–
-                  <span className="font-medium text-foreground">{Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, filteredProducts.length)}</span>
-                  {" "}of <span className="font-medium text-foreground">{filteredProducts.length}</span>
-                </span>
-                <div className="flex items-center gap-1.5 border-l border-border pl-3">
-                  Show
-                  <select
-                    value={table.getState().pagination.pageSize}
-                    onChange={(e) => table.setPageSize(Number(e.target.value))}
-                    className="h-6 bg-card border border-border rounded px-1.5 text-foreground focus:outline-none text-xs cursor-pointer"
-                  >
-                    {[8, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="h-7 gap-0.5 px-2">
-                  <ChevronLeft className="h-3.5 w-3.5" />Prev
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="h-7 gap-0.5 px-2">
-                  Next<ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* DataTable */}
+      <DataTable
+        columns={columns}
+        data={filteredProducts}
+        isLoading={isLoading}
+        exportFilename="products"
+        searchPlaceholder="Search products..."
+        emptyIcon={<Package className="h-8 w-8" />}
+        emptyText="No products found. Try a different category."
+        pageSize={10}
+        toolbar={
+          <ReactSelect
+            className="w-44"
+            options={[
+              { value: "all", label: "All Categories" },
+              ...categories.map((c) => ({ value: c.toLowerCase(), label: c }))
+            ]}
+            value={{ value: categoryFilter, label: categoryFilter === "all" ? "All Categories" : categories.find(c => c.toLowerCase() === categoryFilter) || categoryFilter }}
+            onChange={(opt) => setCategoryFilter((opt as { value: string })?.value || "all")}
+            placeholder="All Categories"
+            isSearchable={false}
+          />
+        }
+      />
 
       {/* ADD Dialog */}
       <Dialog open={isOpenAdd} onOpenChange={setIsOpenAdd}>

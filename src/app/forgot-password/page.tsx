@@ -181,7 +181,7 @@ export default function ForgotPasswordPage() {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full rounded-xl font-bold h-10" disabled={forgotMutation.isPending}>
+                <Button type="submit" className="w-full font-bold" size="lg" disabled={forgotMutation.isPending}>
                   {forgotMutation.isPending
                     ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Sending OTP...</>
                     : <>Send Reset OTP <ArrowRight className="h-4 w-4 ml-2" /></>}
@@ -288,7 +288,7 @@ export default function ForgotPasswordPage() {
 
                 <Button
                   type="submit"
-                  className="w-full rounded-xl font-bold h-10"
+                  className="w-full font-bold" size="lg"
                   disabled={resetMutation.isPending || otp.length < 6}
                 >
                   {resetMutation.isPending
@@ -311,7 +311,7 @@ export default function ForgotPasswordPage() {
                 <h2 className="text-lg font-bold text-foreground">Password reset!</h2>
                 <p className="text-sm text-muted-foreground mt-1">You can now log in with your new password.</p>
               </div>
-              <Button className="w-full rounded-xl font-bold h-10" onClick={() => router.push("/")}>
+              <Button className="w-full font-bold" size="lg" onClick={() => router.push("/")}>
                 Go to Login <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </CardContent>

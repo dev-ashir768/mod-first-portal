@@ -45,7 +45,9 @@ function flattenRow(row: Record<string, unknown>): Record<string, string> {
 
 function exportCSV<TData>(table: TanstackTable<TData>, filename: string) {
   const visibleCols = table.getVisibleLeafColumns().filter((c) => c.id !== "actions");
-  const headers = visibleCols.map((c) => String(c.columnDef.header ?? c.id));
+  const headers = visibleCols.map((c) =>
+    typeof c.columnDef.header === "string" ? c.columnDef.header : c.id.replace(/_/g, " ")
+  );
   const rows = table.getFilteredRowModel().rows.map((row) =>
     visibleCols.map((col) => {
       const val = row.getValue(col.id);
@@ -68,7 +70,9 @@ function exportCSV<TData>(table: TanstackTable<TData>, filename: string) {
 
 function exportExcel<TData>(table: TanstackTable<TData>, filename: string) {
   const visibleCols = table.getVisibleLeafColumns().filter((c) => c.id !== "actions");
-  const headers = visibleCols.map((c) => String(c.columnDef.header ?? c.id));
+  const headers = visibleCols.map((c) =>
+    typeof c.columnDef.header === "string" ? c.columnDef.header : c.id.replace(/_/g, " ")
+  );
   const rows = table.getFilteredRowModel().rows.map((row) =>
     visibleCols.map((col) => {
       const val = row.getValue(col.id);
@@ -212,7 +216,11 @@ export function DataTable<TData, TValue = unknown>({
                       </svg>
                     )}
                   </span>
-                  <span className="capitalize text-xs">{String(col.columnDef.header ?? col.id)}</span>
+                  <span className="capitalize text-xs">
+                    {typeof col.columnDef.header === "string"
+                      ? col.columnDef.header
+                      : col.id.replace(/_/g, " ")}
+                  </span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

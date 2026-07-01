@@ -76,10 +76,9 @@ function buildClassNames<
 
     control: ({ isFocused, isDisabled }) =>
       cn(
-        // same as shadcn Input: h-8, border-input, bg-white, text-sm, rounded
-        "flex h-8 w-full cursor-pointer items-center rounded border bg-white pl-2.5 pr-1 text-sm transition-all",
+        "flex h-9 w-full cursor-pointer items-center rounded-lg border bg-card pl-3 pr-1 text-sm shadow-sm transition-all dark:bg-input/20",
         isFocused
-          ? "border-ring ring-2 ring-ring/30 outline-none"
+          ? "border-ring ring-2 ring-ring/25 outline-none"
           : "border-input",
         !isFocused && "hover:border-foreground/30",
         isDisabled && "pointer-events-none bg-muted opacity-50 cursor-not-allowed"

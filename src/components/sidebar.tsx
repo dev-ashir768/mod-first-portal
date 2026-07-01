@@ -3,10 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard, Package, ShoppingCart, Users,
-  Settings, Menu, X, Sun, Moon, LogOut,
-} from "lucide-react";
+import { Menu, X, Sun, Moon, LogOut } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useAllPermissions } from "@/hooks/usePermissions";
 
@@ -18,12 +15,7 @@ interface SidebarProps {
 }
 
 const ALL_NAV_ITEMS = [
-  { name: "Dashboard", href: "/",         icon: LayoutDashboard, slug: "dashboard" },
-  { name: "Products",  href: "/products",  icon: Package,         slug: "products"  },
-  { name: "Orders",    href: "/orders",    icon: ShoppingCart,    slug: "orders"    },
-  { name: "Customers", href: "/customers", icon: Users,           slug: "customers" },
-  { name: "Menus",     href: "/menus",     icon: Menu,            slug: "menus"     },
-  { name: "Settings",  href: "/settings",  icon: Settings,        slug: "settings"  },
+  { name: "Menus", href: "/menus", icon: Menu, slug: "menus" },
 ] as const;
 
 export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarProps) {
@@ -80,7 +72,7 @@ export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarP
           </p>
         )}
         {navItems.map((item) => {
-          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
 
           return (

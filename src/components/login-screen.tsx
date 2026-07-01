@@ -178,7 +178,7 @@ export function LoginScreen() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full rounded-xl font-bold h-10" disabled={loginMutation.isPending}>
+                <Button type="submit" className="w-full font-bold" size="lg" disabled={loginMutation.isPending}>
                   {loginMutation.isPending ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" />Sending OTP...</>
                   ) : (
@@ -215,7 +215,7 @@ export function LoginScreen() {
               <OtpInput value={otp} onChange={setOtp} />
 
               <Button
-                className="w-full rounded-xl font-bold h-10"
+                className="w-full font-bold" size="lg"
                 onClick={onOtpSubmit}
                 disabled={verifyOtpMutation.isPending || otp.length < 6}
               >

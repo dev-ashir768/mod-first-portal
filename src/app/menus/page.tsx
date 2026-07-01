@@ -120,10 +120,12 @@ function MenusTab() {
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [selected, setSelected] = useState<Menu | null>(null);
 
-  const menus: Menu[] = data?.payload?.data ?? [];
+  const menus: Menu[] = (Array.isArray(data?.payload) ? data.payload : (data?.payload as { data?: Menu[] })?.data) ?? [];
 
   const addForm = useForm<MenuFormValues>({
     resolver: zodResolver(menuSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "", slug: "", menu_type: "backend", parent_id: null, sort_order: 0,
       icon: "", link_type: "page", link_value: "", external_url: "",
@@ -131,7 +133,11 @@ function MenusTab() {
     },
   });
 
-  const editForm = useForm<MenuFormValues>({ resolver: zodResolver(menuSchema) });
+  const editForm = useForm<MenuFormValues>({
+    resolver: zodResolver(menuSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
 
   useEffect(() => {
     if (selected && isOpenEdit) {
@@ -383,11 +389,11 @@ function MenuFormDialog({ open, onOpenChange, title, description, form, onSubmit
           <div className="p-4 space-y-3 overflow-y-auto flex-1">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Menu Name *" error={errors.name?.message}>
-                <Input {...register("name")} placeholder="e.g. Dashboard"
-                  onChange={(e) => {
-                    register("name").onChange(e);
-                    setValue("slug", autoSlug(e.target.value));
-                  }}
+                <Input
+                  {...register("name", {
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setValue("slug", autoSlug(e.target.value), { shouldValidate: false }),
+                  })}
+                  placeholder="e.g. Dashboard"
                 />
               </Field>
               <Field label="Slug *" error={errors.slug?.message}>
@@ -515,11 +521,13 @@ function MenuRightsTab() {
   const deleteMutation = useDeleteMenuRightMutation();
   const { addToast } = useToast();
 
-  const menus: Menu[] = menuData?.payload?.data ?? [];
-  const rights: MenuRight[] = rightsData?.payload?.data ?? [];
+  const menus: Menu[] = (Array.isArray(menuData?.payload) ? menuData.payload : (menuData?.payload as { data?: Menu[] })?.data) ?? [];
+  const rights: MenuRight[] = (Array.isArray(rightsData?.payload) ? rightsData.payload : (rightsData?.payload as { data?: MenuRight[] })?.data) ?? [];
 
   const addForm = useForm<MenuRightFormValues>({
     resolver: zodResolver(menuRightSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: { menu_id: 0, role: selectedRole, can_view: true, can_create: false, can_edit: false, can_delete: false },
   });
 
@@ -556,115 +564,126 @@ function MenuRightsTab() {
 
   const isLoading = menusLoading || rightsLoading;
 
+  const rightsColumns = useMemo<ColumnDef<MenuRight>[]>(() => [
+    {
+      accessorKey: "menu_id",
+      header: "Menu",
+      cell: ({ row }) => {
+        const menu = menus.find((m) => m.id === row.original.menu_id);
+        return (
+          <div>
+            <p className="text-xs font-medium text-foreground">{menu?.name ?? `Menu #${row.original.menu_id}`}</p>
+            {menu && <p className="text-[10px] text-muted-foreground capitalize">{menu.menu_type}</p>}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "can_view",
+      header: () => <div className="flex items-center justify-center gap-1"><Eye className="h-3 w-3" />View</div>,
+      cell: ({ row }) => {
+        const isPending = updateMutation.isPending && updateMutation.variables?.id === row.original.id;
+        return (
+          <div className="flex justify-center">
+            <PermToggle checked={row.original.can_view} onChange={(v) => onPermChange(row.original, "can_view", v)} disabled={isPending || !canEdit} />
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "can_create",
+      header: () => <div className="flex items-center justify-center gap-1"><FilePlus className="h-3 w-3" />Create</div>,
+      cell: ({ row }) => {
+        const isPending = updateMutation.isPending && updateMutation.variables?.id === row.original.id;
+        return (
+          <div className="flex justify-center">
+            <PermToggle checked={row.original.can_create} onChange={(v) => onPermChange(row.original, "can_create", v)} disabled={isPending || !canEdit} />
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "can_edit",
+      header: () => <div className="flex items-center justify-center gap-1"><PenLine className="h-3 w-3" />Edit</div>,
+      cell: ({ row }) => {
+        const isPending = updateMutation.isPending && updateMutation.variables?.id === row.original.id;
+        return (
+          <div className="flex justify-center">
+            <PermToggle checked={row.original.can_edit} onChange={(v) => onPermChange(row.original, "can_edit", v)} disabled={isPending || !canEdit} />
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "can_delete",
+      header: () => <div className="flex items-center justify-center gap-1"><Trash2 className="h-3 w-3" />Delete</div>,
+      cell: ({ row }) => {
+        const isPending = updateMutation.isPending && updateMutation.variables?.id === row.original.id;
+        return (
+          <div className="flex justify-center">
+            <PermToggle checked={row.original.can_delete} onChange={(v) => onPermChange(row.original, "can_delete", v)} disabled={isPending || !canEdit} />
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => canDelete ? (
+        <div className="flex justify-end">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost" size="icon-sm"
+                  className="text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20"
+                  onClick={() => { setSelectedRight(row.original); setIsOpenDelete(true); }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Remove right</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      ) : null,
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [menus, canEdit, canDelete, updateMutation.isPending, updateMutation.variables]);
+
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5 flex-1 max-w-xs">
-          <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
-          <div className="flex-1">
-            <ReactSelect
-              options={roleOptions}
-              value={roleOptions.find((o) => o.value === selectedRole) ?? null}
-              onChange={(opt) => setSelectedRole((opt as { value: string })?.value ?? "admin")}
-              isSearchable={false}
-              placeholder="Select role..."
-            />
-          </div>
-        </div>
-        {canCreate && (
-          <Button size="sm" onClick={() => setIsOpenAdd(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add Right
-          </Button>
-        )}
-      </div>
-
-      {isLoading && (
-        <div className="space-y-2">
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
-        </div>
-      )}
-
-      {!isLoading && (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="px-4 text-xs font-semibold text-muted-foreground">Menu</TableHead>
-                    <TableHead className="px-3 text-xs font-semibold text-muted-foreground text-center">
-                      <div className="flex items-center justify-center gap-1"><Eye className="h-3 w-3" />View</div>
-                    </TableHead>
-                    <TableHead className="px-3 text-xs font-semibold text-muted-foreground text-center">
-                      <div className="flex items-center justify-center gap-1"><FilePlus className="h-3 w-3" />Create</div>
-                    </TableHead>
-                    <TableHead className="px-3 text-xs font-semibold text-muted-foreground text-center">
-                      <div className="flex items-center justify-center gap-1"><PenLine className="h-3 w-3" />Edit</div>
-                    </TableHead>
-                    <TableHead className="px-3 text-xs font-semibold text-muted-foreground text-center">
-                      <div className="flex items-center justify-center gap-1"><Trash2 className="h-3 w-3" />Delete</div>
-                    </TableHead>
-                    <TableHead className="px-3 text-xs font-semibold text-muted-foreground text-right">Remove</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rights.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
-                        <ShieldOff className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        No rights assigned to <strong>{selectedRole.replace(/_/g, " ")}</strong> yet.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {rights.map((right, idx) => {
-                    const menu = menus.find((m) => m.id === right.menu_id);
-                    const isPending = updateMutation.isPending && updateMutation.variables?.id === right.id;
-                    return (
-                      <TableRow key={right.id} className={`last:border-0 ${idx % 2 === 0 ? "" : "bg-muted/10"}`}>
-                        <TableCell className="px-4 py-2.5">
-                          <div>
-                            <p className="text-xs font-medium text-foreground">{menu?.name ?? `Menu #${right.menu_id}`}</p>
-                            {menu && <p className="text-[10px] text-muted-foreground capitalize">{menu.menu_type}</p>}
-                          </div>
-                        </TableCell>
-                        {(["can_view", "can_create", "can_edit", "can_delete"] as const).map((key) => (
-                          <TableCell key={key} className="px-3 py-2.5 text-center">
-                            <div className="flex justify-center">
-                              <PermToggle
-                                checked={right[key]}
-                                onChange={(v) => onPermChange(right, key, v)}
-                                disabled={isPending || !canEdit}
-                              />
-                            </div>
-                          </TableCell>
-                        ))}
-                        <TableCell className="px-3 py-2.5 text-right">
-                          {canDelete && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost" size="icon-sm"
-                                    className="text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20"
-                                    onClick={() => { setSelectedRight(right); setIsOpenDelete(true); }}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Remove right</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+      <DataTable
+        columns={rightsColumns}
+        data={rights}
+        isLoading={isLoading}
+        exportFilename={`menu-rights-${selectedRole}`}
+        searchPlaceholder="Search menus..."
+        emptyIcon={<ShieldOff className="h-8 w-8" />}
+        emptyText={`No rights assigned to "${selectedRole.replace(/_/g, " ")}" yet.`}
+        pageSize={10}
+        toolbar={
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="w-52">
+              <ReactSelect
+                options={roleOptions}
+                value={roleOptions.find((o) => o.value === selectedRole) ?? null}
+                onChange={(opt) => setSelectedRole((opt as { value: string })?.value ?? "admin")}
+                isSearchable={false}
+                placeholder="Select role..."
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        }
+        toolbarRight={
+          canCreate ? (
+            <Button size="sm" onClick={() => setIsOpenAdd(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Right
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* ── Add Right Dialog ── */}
       <Dialog open={isOpenAdd} onOpenChange={(v) => { setIsOpenAdd(v); if (!v) addForm.reset(); }}>

@@ -62,7 +62,7 @@ const EMPTY: FormValues = {
   site_name: "", site_tagline: "", site_description: "",
   logo_url: "", favicon_url: "", footer_logo_url: "",
   primary_color: "#3b82f6", secondary_color: "#1e40af", accent_color: "#eab308",
-  font_primary: "", font_heading: "",
+  font_primary: "Inter", font_heading: "Playfair Display",
   contact_email: "", support_email: "",
   contact_phone: "", whatsapp_number: "",
   address: "", business_hours: "",
@@ -104,11 +104,15 @@ function toFormValues(s: WebsiteSetting): FormValues {
   };
 }
 
-// Strip empty strings and undefined before sending to API
+// Fields the API requires even when empty
+const REQUIRED_STRING_FIELDS = new Set(["font_primary", "font_heading"]);
+
+// Strip empty strings, null, and undefined — except required string fields
 function cleanPayload(values: FormValues): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(values)) {
-    if (v === "" || v === undefined) continue;
+    if (v === null || v === undefined) continue;
+    if (v === "" && !REQUIRED_STRING_FIELDS.has(k)) continue;
     out[k] = v;
   }
   return out;
@@ -201,9 +205,9 @@ function SettingFormDialog({
     defaultValues: EMPTY,
   });
 
-  // Refs for each section to scroll into view
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isProgrammaticScroll = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -212,9 +216,52 @@ function SettingFormDialog({
     }
   }, [open, selected, reset]);
 
+  // Scroll spy via scroll event on the container
+  useEffect(() => {
+    if (!open) return;
+    // Wait one tick for dialog to fully render
+    const timer = setTimeout(() => {
+      const container = scrollRef.current;
+      if (!container) return;
+
+      const onScroll = () => {
+        if (isProgrammaticScroll.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = container;
+
+        // At the very bottom → force last section active
+        if (scrollTop + clientHeight >= scrollHeight - 8) {
+          setActiveSection(SECTIONS[SECTIONS.length - 1].id);
+          return;
+        }
+
+        const threshold = clientHeight * 0.3;
+        let current: SectionId = SECTIONS[0].id;
+        for (const { id } of SECTIONS) {
+          const el = sectionRefs.current[id];
+          if (el && el.offsetTop <= scrollTop + threshold) {
+            current = id;
+          }
+        }
+        setActiveSection(current);
+      };
+
+      container.addEventListener("scroll", onScroll, { passive: true });
+      // Run once to set initial state
+      onScroll();
+      return () => container.removeEventListener("scroll", onScroll);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [open]);
+
   const scrollToSection = (id: SectionId) => {
+    const container = scrollRef.current;
+    const el = sectionRefs.current[id];
+    if (!container || !el) return;
     setActiveSection(id);
-    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    isProgrammaticScroll.current = true;
+    container.scrollTo({ top: el.offsetTop - 16, behavior: "smooth" });
+    setTimeout(() => { isProgrammaticScroll.current = false; }, 700);
   };
 
   const onSubmit = (values: FormValues) => {
@@ -290,7 +337,7 @@ function SettingFormDialog({
             <div className="px-6 py-5 space-y-8">
 
               {/* General */}
-              <div ref={(el) => { sectionRefs.current["general"] = el; }}>
+              <div ref={(el) => { sectionRefs.current["general"] = el; }} data-section="general">
                 <SectionHeader icon={Globe} label="General" />
                 <div className="space-y-4 mt-4">
                   <Field label="Site Name *" error={errors.site_name?.message}>
@@ -313,7 +360,7 @@ function SettingFormDialog({
               <Divider />
 
               {/* Media */}
-              <div ref={(el) => { sectionRefs.current["media"] = el; }}>
+              <div ref={(el) => { sectionRefs.current["media"] = el; }} data-section="media">
                 <SectionHeader icon={ImageIcon} label="Media" />
                 <div className="space-y-4 mt-4">
                   <Field label="Logo URL" hint="Main header logo (SVG or PNG recommended)">
@@ -333,7 +380,7 @@ function SettingFormDialog({
               <Divider />
 
               {/* Theme */}
-              <div ref={(el) => { sectionRefs.current["theme"] = el; }}>
+              <div ref={(el) => { sectionRefs.current["theme"] = el; }} data-section="theme">
                 <SectionHeader icon={Palette} label="Theme & Fonts" />
                 <div className="space-y-4 mt-4">
                   <div className="grid grid-cols-3 gap-3">
@@ -355,7 +402,7 @@ function SettingFormDialog({
               <Divider />
 
               {/* Contact */}
-              <div ref={(el) => { sectionRefs.current["contact"] = el; }}>
+              <div ref={(el) => { sectionRefs.current["contact"] = el; }} data-section="contact">
                 <SectionHeader icon={Phone} label="Contact" />
                 <div className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-3">
@@ -386,7 +433,7 @@ function SettingFormDialog({
               <Divider />
 
               {/* Social */}
-              <div ref={(el) => { sectionRefs.current["social"] = el; }}>
+              <div ref={(el) => { sectionRefs.current["social"] = el; }} data-section="social">
                 <SectionHeader icon={Share2} label="Social Media" />
                 <div className="space-y-4 mt-4">
                   <Field label="Facebook Page URL">
@@ -401,11 +448,11 @@ function SettingFormDialog({
               <Divider />
 
               {/* Commerce */}
-              <div ref={(el) => { sectionRefs.current["commerce"] = el; }}>
+              <div ref={(el) => { sectionRefs.current["commerce"] = el; }} data-section="commerce">
                 <SectionHeader icon={ShoppingCart} label="Commerce" />
                 <div className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Currency Code" hint="ISO 4217 code (e.g. PKR, USD)">
+                    <Field label="Currency Code">
                       <Input {...register("currency")} placeholder="PKR" />
                     </Field>
                     <Field label="Currency Symbol">
@@ -438,7 +485,7 @@ function SettingFormDialog({
               <Divider />
 
               {/* SEO */}
-              <div ref={(el) => { sectionRefs.current["seo"] = el; }}>
+              <div ref={(el) => { sectionRefs.current["seo"] = el; }} data-section="seo">
                 <SectionHeader icon={FileText} label="SEO" />
                 <div className="space-y-4 mt-4">
                   <Field label="Meta Title" hint="Shown in browser tab and search results (50–60 chars)">

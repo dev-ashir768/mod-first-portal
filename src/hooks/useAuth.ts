@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useAuthStore, AuthUser } from "@/store/useAuthStore";
 
@@ -68,6 +68,26 @@ export function useResetPasswordMutation() {
   >({
     mutationFn: (body) =>
       apiRequest<ApiResponse<{ message: string }>>("auth/reset-password", { method: "POST", body }),
+  });
+}
+
+/* ── Get Profile (authenticated) ── */
+export function useProfileQuery() {
+  const token = useAuthStore((s) => s.accessToken);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const updateUser = useAuthStore((s) => s.updateUser);
+
+  return useQuery<AuthUser, ApiError>({
+    queryKey: ["profile"],
+    enabled: isAuthenticated && !!token,
+    staleTime: 5 * 60 * 1000, // 5 min — re-fetch on window focus after that
+    queryFn: async () => {
+      const res = await apiRequest<ApiResponse<AuthUser>>("auth/profile", {
+        token: token ?? undefined,
+      });
+      updateUser(res.payload);
+      return res.payload;
+    },
   });
 }
 

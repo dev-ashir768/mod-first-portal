@@ -23,6 +23,7 @@ import { ReactSelect } from "@/components/ui/react-select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FileUpload } from "@/components/ui/file-upload";
 
 const statusMap = {
   active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/50",
@@ -51,7 +52,7 @@ export default function ProductsPage() {
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, setValue: setValueAdd, formState: { errors: errorsAdd } } = useForm<ProductFormValues>({
+  const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, setValue: setValueAdd, watch: watchAdd, formState: { errors: errorsAdd } } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: { name: "", description: "", sku: "", price: 0, stock: 0, category: "", status: "active", image: "" }
   });
@@ -468,11 +469,16 @@ export default function ProductsPage() {
                   isSearchable={false}
                 />
               </Field>
-              <Field label="Image URL" error={errorsAdd.image?.message}>
-                <Input {...registerAdd("image")} placeholder="https://..." />
+              <Field label="Product Image" error={errorsAdd.image?.message}>
+                <FileUpload
+                  value={watchAdd("image")}
+                  onChange={(url) => setValueAdd("image", url, { shouldValidate: true })}
+                  folder="products"
+                  disabled={addMutation.isPending}
+                />
               </Field>
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-border mt-2">
+            <div className="flex justify-end gap-2 px-4 py-3 -mx-4 -mb-4 border-t border-border bg-muted/20 mt-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setIsOpenAdd(false)} disabled={addMutation.isPending}>Cancel</Button>
               <Button type="submit" size="sm" disabled={addMutation.isPending}>
                 {addMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving...</> : "Create Product"}
@@ -525,11 +531,16 @@ export default function ProductsPage() {
                   isSearchable={false}
                 />
               </Field>
-              <Field label="Image URL" error={errorsEdit.image?.message}>
-                <Input {...registerEdit("image")} placeholder="https://..." />
+              <Field label="Product Image" error={errorsEdit.image?.message}>
+                <FileUpload
+                  value={watchEdit("image")}
+                  onChange={(url) => setValueEdit("image", url, { shouldValidate: true })}
+                  folder="products"
+                  disabled={updateMutation.isPending}
+                />
               </Field>
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-border mt-2">
+            <div className="flex justify-end gap-2 px-4 py-3 -mx-4 -mb-4 border-t border-border bg-muted/20 mt-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setIsOpenEdit(false)} disabled={updateMutation.isPending}>Cancel</Button>
               <Button type="submit" size="sm" disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving...</> : "Save Changes"}

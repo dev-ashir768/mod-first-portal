@@ -6,7 +6,13 @@ export interface AuthUser {
   full_name: string;
   email: string;
   phone: string;
+  image: string;
   role: string;
+  is_admin: boolean;
+  is_active: boolean;
+  email_verified: boolean;
+  last_login_date: string | null;
+  is_locked: boolean;
 }
 
 interface AuthState {
@@ -16,12 +22,13 @@ interface AuthState {
   isAuthenticated: boolean;
 
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  updateUser: (patch: Partial<AuthUser>) => void;
   clearAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
@@ -29,6 +36,11 @@ export const useAuthStore = create<AuthState>()(
 
       setAuth: (user, accessToken, refreshToken) =>
         set({ user, accessToken, refreshToken, isAuthenticated: true }),
+
+      updateUser: (patch) => {
+        const current = get().user;
+        if (current) set({ user: { ...current, ...patch } });
+      },
 
       clearAuth: () =>
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),

@@ -1,17 +1,35 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Menu, Search, Bell } from "lucide-react";
 import { ToastContainer } from "./toast-container";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LoginScreen } from "./login-screen";
+import { UserMenu } from "./user-menu";
+import { useProfileQuery } from "@/hooks/useAuth";
+
+const PUBLIC_ROUTES = ["/forgot-password"];
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const user = useAuthStore((state) => state.user);
+  const pathname = usePathname();
+
+  // Keep profile fresh — silently syncs store; no UI dependency here
+  useProfileQuery();
+
+  /* Public routes render without auth check */
+  if (PUBLIC_ROUTES.includes(pathname)) {
+    return (
+      <div className="min-h-screen bg-background relative">
+        {children}
+        <ToastContainer />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -73,15 +91,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
 
             <div className="h-6 w-px bg-border mx-1" />
 
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 text-white flex items-center justify-center font-bold text-[10px] select-none uppercase">
-                {user ? user.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2) : "AD"}
-              </div>
-              <div className="hidden md:block text-left select-none leading-none">
-                <p className="text-xs font-semibold text-foreground">{user?.full_name ?? "Admin"}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 capitalize">{user?.role?.replace("_", " ") ?? "Administrator"}</p>
-              </div>
-            </div>
+            <UserMenu />
           </div>
         </header>
 

@@ -1,16 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useSettings, useUpdateSettings } from "@/hooks/useMockData";
 import { settingsSchema, SettingsFormValues } from "@/lib/schema";
 import { useToast } from "@/store/useToast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Store, CreditCard, Loader2, Mail, Percent,
-  CheckCircle2, ShieldAlert, Lock, Eye, EyeOff, KeyRound,
-} from "lucide-react";
+import { Store, CreditCard, Loader2, Mail, Percent, CheckCircle2, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,80 +14,12 @@ import { Label } from "@/components/ui/label";
 import { ReactSelect } from "@/components/ui/react-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useChangePasswordMutation } from "@/hooks/useAuth";
-
-/* ── Change password schema ── */
-const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z
-      .string()
-      .min(8, "Minimum 8 characters")
-      .regex(/[A-Z]/, "Must include an uppercase letter")
-      .regex(/[0-9]/, "Must include a number")
-      .regex(/[^A-Za-z0-9]/, "Must include a special character"),
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.newPassword === d.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
-
-/* ── Password field with show/hide toggle ── */
-function PasswordField({
-  id,
-  label,
-  placeholder,
-  error,
-  registration,
-  disabled,
-}: {
-  id: string;
-  label: string;
-  placeholder?: string;
-  error?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  registration: any;
-  disabled?: boolean;
-}) {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-        </span>
-        <Input
-          id={id}
-          type={show ? "text" : "password"}
-          placeholder={placeholder ?? "••••••••"}
-          className="pl-8 pr-8"
-          disabled={disabled}
-          {...registration}
-        />
-        <button
-          type="button"
-          onClick={() => setShow(!show)}
-          className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground hover:text-foreground"
-        >
-          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const { data: settings, isLoading } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
-  const changePasswordMutation = useChangePasswordMutation();
   const { addToast } = useToast();
 
-  /* ── Store settings form ── */
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isDirty } } =
     useForm<SettingsFormValues>({
       resolver: zodResolver(settingsSchema),
@@ -110,32 +38,8 @@ export default function SettingsPage() {
 
   const onSubmit = (values: SettingsFormValues) => {
     updateSettingsMutation.mutate(values, {
-      onSuccess: () => {
-        addToast("Settings saved successfully.", "success", "Saved");
-        reset(values);
-      },
+      onSuccess: () => { addToast("Settings saved successfully.", "success", "Saved"); reset(values); },
       onError: () => addToast("Failed to save settings.", "error", "Error"),
-    });
-  };
-
-  /* ── Change password form ── */
-  const {
-    register: registerPwd,
-    handleSubmit: handleSubmitPwd,
-    reset: resetPwd,
-    formState: { errors: errorsPwd },
-  } = useForm<ChangePasswordValues>({
-    resolver: zodResolver(changePasswordSchema),
-    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
-  });
-
-  const onChangePassword = (values: ChangePasswordValues) => {
-    changePasswordMutation.mutate(values, {
-      onSuccess: () => {
-        addToast("Password changed successfully.", "success", "Done");
-        resetPwd();
-      },
-      onError: (err) => addToast(err.message, "error", "Failed"),
     });
   };
 
@@ -152,13 +56,27 @@ export default function SettingsPage() {
     );
   }
 
+  const SaveBar = () => (
+    <div className="flex items-center justify-between px-3 py-2.5 rounded-md border border-border bg-muted/30">
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5 select-none">
+        {isDirty
+          ? <><ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0" />Unsaved changes</>
+          : <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />All settings saved</>}
+      </div>
+      <Button type="submit" disabled={!isDirty || updateSettingsMutation.isPending} size="sm">
+        {updateSettingsMutation.isPending
+          ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving...</>
+          : "Save Settings"}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
         <div>
           <h1 className="text-lg font-semibold text-foreground">Settings</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Configure store, currency, tax, and security settings</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Configure store, currency, and tax settings</p>
         </div>
       </div>
 
@@ -170,12 +88,9 @@ export default function SettingsPage() {
           <TabsTrigger value="billing" className="text-xs h-7 rounded flex items-center gap-1.5 px-3">
             <CreditCard className="h-3.5 w-3.5" /> Billing
           </TabsTrigger>
-          <TabsTrigger value="security" className="text-xs h-7 rounded flex items-center gap-1.5 px-3">
-            <KeyRound className="h-3.5 w-3.5" /> Security
-          </TabsTrigger>
         </TabsList>
 
-        {/* ── General ── */}
+        {/* General */}
         <TabsContent value="general" className="mt-3 focus-visible:outline-none">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Card>
@@ -203,22 +118,11 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
-            <div className="flex items-center justify-between px-3 py-2.5 rounded-md border border-border bg-muted/30">
-              <div className="text-xs text-muted-foreground flex items-center gap-1.5 select-none">
-                {isDirty
-                  ? <><ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0" /> Unsaved changes</>
-                  : <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" /> All settings saved</>}
-              </div>
-              <Button type="submit" disabled={!isDirty || updateSettingsMutation.isPending} size="sm">
-                {updateSettingsMutation.isPending
-                  ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving...</>
-                  : "Save Settings"}
-              </Button>
-            </div>
+            <SaveBar />
           </form>
         </TabsContent>
 
-        {/* ── Billing ── */}
+        {/* Billing */}
         <TabsContent value="billing" className="mt-3 focus-visible:outline-none">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Card>
@@ -258,66 +162,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
-            <div className="flex items-center justify-between px-3 py-2.5 rounded-md border border-border bg-muted/30">
-              <div className="text-xs text-muted-foreground flex items-center gap-1.5 select-none">
-                {isDirty
-                  ? <><ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0" /> Unsaved changes</>
-                  : <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" /> All settings saved</>}
-              </div>
-              <Button type="submit" disabled={!isDirty || updateSettingsMutation.isPending} size="sm">
-                {updateSettingsMutation.isPending
-                  ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving...</>
-                  : "Save Settings"}
-              </Button>
-            </div>
-          </form>
-        </TabsContent>
-
-        {/* ── Security / Change Password ── */}
-        <TabsContent value="security" className="mt-3 focus-visible:outline-none">
-          <form onSubmit={handleSubmitPwd(onChangePassword)} className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3 border-b border-border">
-                <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                  <KeyRound className="h-4 w-4 text-rose-500" /> Change Password
-                </CardTitle>
-                <CardDescription className="text-xs">Update your admin account password. You must enter your current password to proceed.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-4">
-                <PasswordField
-                  id="currentPassword"
-                  label="Current Password"
-                  placeholder="Your current password"
-                  registration={registerPwd("currentPassword")}
-                  error={errorsPwd.currentPassword?.message}
-                  disabled={changePasswordMutation.isPending}
-                />
-                <div className="h-px bg-border" />
-                <PasswordField
-                  id="newPassword"
-                  label="New Password"
-                  placeholder="Min 8 chars, uppercase, number, symbol"
-                  registration={registerPwd("newPassword")}
-                  error={errorsPwd.newPassword?.message}
-                  disabled={changePasswordMutation.isPending}
-                />
-                <PasswordField
-                  id="confirmPassword"
-                  label="Confirm New Password"
-                  placeholder="Re-enter new password"
-                  registration={registerPwd("confirmPassword")}
-                  error={errorsPwd.confirmPassword?.message}
-                  disabled={changePasswordMutation.isPending}
-                />
-              </CardContent>
-            </Card>
-            <div className="flex justify-end">
-              <Button type="submit" disabled={changePasswordMutation.isPending} size="sm">
-                {changePasswordMutation.isPending
-                  ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Updating...</>
-                  : <><KeyRound className="h-3.5 w-3.5 mr-1.5" />Update Password</>}
-              </Button>
-            </div>
+            <SaveBar />
           </form>
         </TabsContent>
       </Tabs>

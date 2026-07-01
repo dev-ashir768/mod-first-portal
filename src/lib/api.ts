@@ -21,15 +21,17 @@ export async function apiRequest<T = unknown>(
   path: string,
   { method = "GET", body, token }: RequestOptions = {}
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const isFormData = body instanceof FormData;
+  const headers: Record<string, string> = {};
+
+  // Don't set Content-Type for FormData — browser sets it with the multipart boundary
+  if (!isFormData) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE_URL}/${path.replace(/^\//, "")}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: isFormData ? body : body ? JSON.stringify(body) : undefined,
   });
 
   const data = await res.json().catch(() => ({}));

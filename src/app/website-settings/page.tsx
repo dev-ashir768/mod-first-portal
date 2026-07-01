@@ -212,9 +212,15 @@ function SettingFormDialog({
   useEffect(() => {
     if (open) {
       reset(selected ? toFormValues(selected) : EMPTY);
-      setActiveSection("general");
     }
   }, [open, selected, reset]);
+
+  // Reset active section when dialog opens (async to avoid synchronous setState-in-effect)
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => setActiveSection("general"));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   // Scroll spy via scroll event on the container
   useEffect(() => {

@@ -75,7 +75,7 @@ export function useWebsiteSettingByIdQuery(id: number | null) {
 export function useCreateWebsiteSettingMutation() {
   const token = useToken();
   const qc = useQueryClient();
-  return useMutation<ApiResponse<WebsiteSetting>, ApiError, WebsiteSettingFormValues>({
+  return useMutation<ApiResponse<WebsiteSetting>, ApiError, Record<string, unknown>>({
     mutationFn: (body) => apiRequest("website-settings/", { method: "POST", body, token }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["website-settings"] }),
   });
@@ -84,7 +84,7 @@ export function useCreateWebsiteSettingMutation() {
 export function useUpdateWebsiteSettingMutation() {
   const token = useToken();
   const qc = useQueryClient();
-  return useMutation<ApiResponse<WebsiteSetting>, ApiError, { id: number; data: Partial<WebsiteSettingFormValues> }>({
+  return useMutation<ApiResponse<WebsiteSetting>, ApiError, { id: number; data: Record<string, unknown> }>({
     mutationFn: ({ id, data }) => apiRequest(`website-settings/${id}`, { method: "PUT", body: data, token }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["website-settings"] }),
   });

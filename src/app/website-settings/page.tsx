@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Settings, Plus, Edit2, Loader2, AlertTriangle,
-  Globe, Palette, Phone, Share2, ShoppingCart, FileText, Image,
+  Globe, Palette, Phone, Share2, ShoppingCart, FileText, ImageIcon,
+  Building2, CheckCircle2,
 } from "lucide-react";
 import {
   useWebsiteSettingsQuery, useCreateWebsiteSettingMutation,
-  useUpdateWebsiteSettingMutation, WebsiteSetting, WebsiteSettingFormValues,
+  useUpdateWebsiteSettingMutation, WebsiteSetting,
 } from "@/hooks/useWebsiteSettings";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/store/useToast";
@@ -19,348 +20,489 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Controller } from "react-hook-form";
+import { cn } from "@/lib/utils";
 
 /* ── Schema ── */
 const schema = z.object({
   site_name: z.string().min(1, "Site name is required"),
-  site_tagline: z.string().nullable().default(null),
-  site_description: z.string().nullable().default(null),
-  logo_url: z.string().nullable().default(null),
-  favicon_url: z.string().nullable().default(null),
-  footer_logo_url: z.string().nullable().default(null),
-  primary_color: z.string().nullable().default(null),
-  secondary_color: z.string().nullable().default(null),
-  accent_color: z.string().nullable().default(null),
-  font_primary: z.string().nullable().default(null),
-  font_heading: z.string().nullable().default(null),
-  contact_email: z.string().email("Invalid email").nullable().or(z.literal("")).default(null),
-  support_email: z.string().email("Invalid email").nullable().or(z.literal("")).default(null),
-  contact_phone: z.string().nullable().default(null),
-  whatsapp_number: z.string().nullable().default(null),
-  address: z.string().nullable().default(null),
-  business_hours: z.string().nullable().default(null),
-  facebook_url: z.string().nullable().default(null),
-  instagram_url: z.string().nullable().default(null),
-  currency: z.string().nullable().default(null),
-  currency_symbol: z.string().nullable().default(null),
-  tax_percentage: z.number().nullable().default(null),
-  free_shipping_threshold: z.number().nullable().default(null),
-  meta_title: z.string().nullable().default(null),
-  meta_description: z.string().nullable().default(null),
-  is_active: z.boolean().default(true),
+  site_tagline: z.string().optional(),
+  site_description: z.string().optional(),
+  logo_url: z.string().optional(),
+  favicon_url: z.string().optional(),
+  footer_logo_url: z.string().optional(),
+  primary_color: z.string().optional(),
+  secondary_color: z.string().optional(),
+  accent_color: z.string().optional(),
+  font_primary: z.string().optional(),
+  font_heading: z.string().optional(),
+  contact_email: z.union([z.string().email("Invalid email"), z.literal(""), z.undefined()]),
+  support_email: z.union([z.string().email("Invalid email"), z.literal(""), z.undefined()]),
+  contact_phone: z.string().optional(),
+  whatsapp_number: z.string().optional(),
+  address: z.string().optional(),
+  business_hours: z.string().optional(),
+  facebook_url: z.string().optional(),
+  instagram_url: z.string().optional(),
+  currency: z.string().optional(),
+  currency_symbol: z.string().optional(),
+  tax_percentage: z.number().nullable().optional(),
+  free_shipping_threshold: z.number().nullable().optional(),
+  meta_title: z.string().optional(),
+  meta_description: z.string().optional(),
+  is_active: z.boolean(),
 });
 
-/* ── Field helper ── */
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+type FormValues = z.infer<typeof schema>;
+
+const EMPTY: FormValues = {
+  site_name: "", site_tagline: "", site_description: "",
+  logo_url: "", favicon_url: "", footer_logo_url: "",
+  primary_color: "#3b82f6", secondary_color: "#1e40af", accent_color: "#eab308",
+  font_primary: "", font_heading: "",
+  contact_email: "", support_email: "",
+  contact_phone: "", whatsapp_number: "",
+  address: "", business_hours: "",
+  facebook_url: "", instagram_url: "",
+  currency: "PKR", currency_symbol: "₨",
+  tax_percentage: null, free_shipping_threshold: null,
+  meta_title: "", meta_description: "",
+  is_active: true,
+};
+
+function toFormValues(s: WebsiteSetting): FormValues {
+  return {
+    site_name: s.site_name ?? "",
+    site_tagline: s.site_tagline ?? "",
+    site_description: s.site_description ?? "",
+    logo_url: s.logo_url ?? "",
+    favicon_url: s.favicon_url ?? "",
+    footer_logo_url: s.footer_logo_url ?? "",
+    primary_color: s.primary_color ?? "#3b82f6",
+    secondary_color: s.secondary_color ?? "#1e40af",
+    accent_color: s.accent_color ?? "#eab308",
+    font_primary: s.font_primary ?? "",
+    font_heading: s.font_heading ?? "",
+    contact_email: s.contact_email ?? "",
+    support_email: s.support_email ?? "",
+    contact_phone: s.contact_phone ?? "",
+    whatsapp_number: s.whatsapp_number ?? "",
+    address: s.address ?? "",
+    business_hours: s.business_hours ?? "",
+    facebook_url: s.facebook_url ?? "",
+    instagram_url: s.instagram_url ?? "",
+    currency: s.currency ?? "PKR",
+    currency_symbol: s.currency_symbol ?? "₨",
+    tax_percentage: s.tax_percentage ?? null,
+    free_shipping_threshold: s.free_shipping_threshold ?? null,
+    meta_title: s.meta_title ?? "",
+    meta_description: s.meta_description ?? "",
+    is_active: s.is_active ?? true,
+  };
+}
+
+// Strip empty strings and undefined before sending to API
+function cleanPayload(values: FormValues): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(values)) {
+    if (v === "" || v === undefined) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/* ── Field ── */
+function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium">{label}</Label>
+      <div>
+        <Label className="text-xs font-medium text-foreground">{label}</Label>
+        {hint && <p className="text-[10px] text-muted-foreground mt-0.5">{hint}</p>}
+      </div>
       {children}
       {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
     </div>
   );
 }
 
-const EMPTY: WebsiteSettingFormValues = {
-  site_name: "", site_tagline: null, site_description: null,
-  logo_url: null, favicon_url: null, footer_logo_url: null,
-  primary_color: null, secondary_color: null, accent_color: null,
-  font_primary: null, font_heading: null,
-  contact_email: null, support_email: null, contact_phone: null,
-  whatsapp_number: null, address: null, business_hours: null,
-  facebook_url: null, instagram_url: null,
-  currency: "PKR", currency_symbol: "₨",
-  tax_percentage: null, free_shipping_threshold: null,
-  meta_title: null, meta_description: null,
-  is_active: true,
-};
-
-function toFormValues(s: WebsiteSetting): WebsiteSettingFormValues {
-  return {
-    site_name: s.site_name,
-    site_tagline: s.site_tagline,
-    site_description: s.site_description,
-    logo_url: s.logo_url,
-    favicon_url: s.favicon_url,
-    footer_logo_url: s.footer_logo_url,
-    primary_color: s.primary_color,
-    secondary_color: s.secondary_color,
-    accent_color: s.accent_color,
-    font_primary: s.font_primary,
-    font_heading: s.font_heading,
-    contact_email: s.contact_email,
-    support_email: s.support_email,
-    contact_phone: s.contact_phone,
-    whatsapp_number: s.whatsapp_number,
-    address: s.address,
-    business_hours: s.business_hours,
-    facebook_url: s.facebook_url,
-    instagram_url: s.instagram_url,
-    currency: s.currency,
-    currency_symbol: s.currency_symbol,
-    tax_percentage: s.tax_percentage,
-    free_shipping_threshold: s.free_shipping_threshold,
-    meta_title: s.meta_title,
-    meta_description: s.meta_description,
-    is_active: s.is_active,
-  };
+/* ── Color Field — picker + text synced ── */
+function ColorField({ label, name, control, register }: {
+  label: string;
+  name: "primary_color" | "secondary_color" | "accent_color";
+  control: ReturnType<typeof useForm<FormValues>>["control"];
+  register: ReturnType<typeof useForm<FormValues>>["register"];
+}) {
+  return (
+    <Controller control={control} name={name}
+      render={({ field }) => (
+        <Field label={label}>
+          <div className="flex gap-2 items-center">
+            <label className="relative cursor-pointer shrink-0">
+              <span
+                className="h-9 w-9 rounded-lg border border-input flex items-center justify-center overflow-hidden shadow-sm"
+                style={{ backgroundColor: field.value || "#3b82f6" }}
+              />
+              <input
+                type="color"
+                value={field.value || "#3b82f6"}
+                onChange={(e) => field.onChange(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </label>
+            <Input
+              {...register(name)}
+              value={field.value || ""}
+              onChange={(e) => field.onChange(e.target.value)}
+              placeholder="#3b82f6"
+              className="font-mono text-xs"
+            />
+          </div>
+        </Field>
+      )}
+    />
+  );
 }
+
+/* ── Section nav ── */
+const SECTIONS = [
+  { id: "general", label: "General", icon: Globe },
+  { id: "media", label: "Media", icon: ImageIcon },
+  { id: "theme", label: "Theme & Fonts", icon: Palette },
+  { id: "contact", label: "Contact", icon: Phone },
+  { id: "social", label: "Social Media", icon: Share2 },
+  { id: "commerce", label: "Commerce", icon: ShoppingCart },
+  { id: "seo", label: "SEO", icon: FileText },
+] as const;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
 
 /* ── Form Dialog ── */
 function SettingFormDialog({
-  open, onOpenChange, selected, onSuccess,
+  open, onOpenChange, selected,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   selected: WebsiteSetting | null;
-  onSuccess: () => void;
 }) {
   const isEdit = !!selected;
   const createMutation = useCreateWebsiteSettingMutation();
   const updateMutation = useUpdateWebsiteSettingMutation();
   const { addToast } = useToast();
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const [activeSection, setActiveSection] = useState<SectionId>("general");
 
-  const form = useForm<WebsiteSettingFormValues>({
+  const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: EMPTY,
   });
-  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+
+  // Refs for each section to scroll into view
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
       reset(selected ? toFormValues(selected) : EMPTY);
+      setActiveSection("general");
     }
   }, [open, selected, reset]);
 
-  const onSubmit = (values: WebsiteSettingFormValues) => {
-    // Convert empty strings to null for nullable fields
-    const clean = Object.fromEntries(
-      Object.entries(values).map(([k, v]) => [k, v === "" ? null : v])
-    ) as WebsiteSettingFormValues;
+  const scrollToSection = (id: SectionId) => {
+    setActiveSection(id);
+    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
+  const onSubmit = (values: FormValues) => {
+    const body = cleanPayload(values);
     if (isEdit && selected) {
-      updateMutation.mutate({ id: selected.id, data: clean }, {
-        onSuccess: () => { addToast("Settings updated.", "success"); onSuccess(); onOpenChange(false); },
+      updateMutation.mutate({ id: selected.id, data: body as never }, {
+        onSuccess: () => { addToast("Settings updated.", "success"); onOpenChange(false); },
         onError: (e) => addToast(e.message, "error", "Error"),
       });
     } else {
-      createMutation.mutate(clean, {
-        onSuccess: () => { addToast("Settings created.", "success"); onSuccess(); onOpenChange(false); },
+      createMutation.mutate(body as never, {
+        onSuccess: () => { addToast("Settings created.", "success"); onOpenChange(false); },
         onError: (e) => addToast(e.message, "error", "Error"),
       });
     }
   };
 
+  const isActive = watch("is_active");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[620px] rounded-lg border-border p-0 max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="px-4 py-3 border-b border-border bg-muted/30 shrink-0">
-          <DialogTitle className="text-sm font-semibold">
-            {isEdit ? "Edit Website Setting" : "New Website Setting"}
-          </DialogTitle>
-          <DialogDescription className="text-[11px] text-muted-foreground">
-            {isEdit ? "Update the website configuration." : "Create a new website setting profile."}
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[780px] w-full rounded-xl border-border p-0 max-h-[88vh] overflow-hidden flex flex-col gap-0">
+        {/* Header */}
+        <DialogHeader className="px-5 py-4 border-b border-border bg-muted/20 shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-sm font-semibold">
+                {isEdit ? "Edit Website Setting" : "New Website Setting"}
+              </DialogTitle>
+              <DialogDescription className="text-[11px] text-muted-foreground mt-0.5">
+                {isEdit ? `Editing: ${selected?.site_name}` : "Configure your website branding, contact, and commerce settings."}
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2 mr-6">
+              <span className="text-xs text-muted-foreground">Active</span>
+              <Controller control={control} name="is_active"
+                render={({ field }) => (
+                  <Switch checked={!!field.value} onCheckedChange={field.onChange} size="sm" />
+                )}
+              />
+              {isActive
+                ? <Badge variant="outline" className="text-[10px] h-5 border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20">Live</Badge>
+                : <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">Inactive</Badge>
+              }
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
-            <Tabs defaultValue="general" className="w-full">
-              <div className="px-4 pt-3 border-b border-border sticky top-0 bg-background z-10">
-                <TabsList className="bg-muted/60 border border-border p-0.5 h-8 rounded-md gap-0.5 flex-wrap h-auto">
-                  {[
-                    { value: "general", label: "General", icon: Globe },
-                    { value: "media", label: "Media", icon: Image },
-                    { value: "theme", label: "Theme", icon: Palette },
-                    { value: "contact", label: "Contact", icon: Phone },
-                    { value: "social", label: "Social", icon: Share2 },
-                    { value: "commerce", label: "Commerce", icon: ShoppingCart },
-                    { value: "seo", label: "SEO", icon: FileText },
-                  ].map(({ value, label, icon: Icon }) => (
-                    <TabsTrigger key={value} value={value} className="text-xs h-7 rounded flex items-center gap-1 px-2.5">
-                      <Icon className="h-3 w-3" />{label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
+        {/* Body: left nav + right content */}
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 overflow-hidden min-h-0">
+          {/* Left nav */}
+          <nav className="w-44 shrink-0 border-r border-border bg-muted/10 py-3 px-2 flex flex-col gap-0.5 overflow-y-auto">
+            {SECTIONS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => scrollToSection(id)}
+                className={cn(
+                  "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-xs font-medium transition-all text-left",
+                  activeSection === id
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Right scrollable content */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto">
+            <div className="px-6 py-5 space-y-8">
 
               {/* General */}
-              <TabsContent value="general" className="p-4 space-y-3 focus-visible:outline-none">
-                <Field label="Site Name *" error={errors.site_name?.message}>
-                  <Input {...register("site_name")} placeholder="ModFirst Apparel" />
-                </Field>
-                <Field label="Site Tagline" error={errors.site_tagline?.message}>
-                  <Input {...register("site_tagline")} placeholder="Premium Fashion & Custom Designs" />
-                </Field>
-                <Field label="Site Description" error={errors.site_description?.message}>
-                  <textarea
-                    {...register("site_description")}
-                    placeholder="Your one-stop shop for modern apparel..."
-                    rows={3}
-                    className="h-auto w-full min-w-0 rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all outline-none placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 disabled:opacity-50 dark:bg-input/20 resize-none"
-                  />
-                </Field>
-                <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 bg-muted/20">
-                  <span className="text-xs font-medium">Active</span>
-                  <Controller control={control} name="is_active"
-                    render={({ field }) => (
-                      <Switch checked={!!field.value} onCheckedChange={field.onChange} size="sm" />
-                    )}
-                  />
+              <div ref={(el) => { sectionRefs.current["general"] = el; }}>
+                <SectionHeader icon={Globe} label="General" />
+                <div className="space-y-4 mt-4">
+                  <Field label="Site Name *" error={errors.site_name?.message}>
+                    <Input {...register("site_name")} placeholder="ModFirst Apparel" />
+                  </Field>
+                  <Field label="Tagline" hint="Short marketing phrase shown under the logo">
+                    <Input {...register("site_tagline")} placeholder="Premium Fashion & Custom Designs" />
+                  </Field>
+                  <Field label="Description" hint="Used in about pages and meta fallbacks">
+                    <textarea
+                      {...register("site_description")}
+                      rows={3}
+                      placeholder="Your one-stop shop for modern apparel and custom designs."
+                      className="w-full min-w-0 rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all outline-none placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 disabled:opacity-50 dark:bg-input/20 resize-none"
+                    />
+                  </Field>
                 </div>
-              </TabsContent>
+              </div>
+
+              <Divider />
 
               {/* Media */}
-              <TabsContent value="media" className="p-4 space-y-3 focus-visible:outline-none">
-                <Field label="Logo URL">
-                  <Input {...register("logo_url")} placeholder="https://modfirst.com/logo.png" />
-                </Field>
-                <Field label="Favicon URL">
-                  <Input {...register("favicon_url")} placeholder="https://modfirst.com/favicon.ico" />
-                </Field>
-                <Field label="Footer Logo URL">
-                  <Input {...register("footer_logo_url")} placeholder="https://modfirst.com/footer-logo.png" />
-                </Field>
-              </TabsContent>
+              <div ref={(el) => { sectionRefs.current["media"] = el; }}>
+                <SectionHeader icon={ImageIcon} label="Media" />
+                <div className="space-y-4 mt-4">
+                  <Field label="Logo URL" hint="Main header logo (SVG or PNG recommended)">
+                    <Input {...register("logo_url")} placeholder="https://modfirst.com/logo.png" />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Favicon URL">
+                      <Input {...register("favicon_url")} placeholder="https://modfirst.com/favicon.ico" />
+                    </Field>
+                    <Field label="Footer Logo URL">
+                      <Input {...register("footer_logo_url")} placeholder="https://modfirst.com/footer-logo.png" />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+
+              <Divider />
 
               {/* Theme */}
-              <TabsContent value="theme" className="p-4 space-y-3 focus-visible:outline-none">
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { name: "primary_color" as const, label: "Primary Color" },
-                    { name: "secondary_color" as const, label: "Secondary Color" },
-                    { name: "accent_color" as const, label: "Accent Color" },
-                  ].map(({ name, label }) => (
-                    <Field key={name} label={label}>
-                      <div className="flex gap-2 items-center">
-                        <Controller control={control} name={name}
-                          render={({ field }) => (
-                            <input
-                              type="color"
-                              value={field.value ?? "#3b82f6"}
-                              onChange={(e) => field.onChange(e.target.value)}
-                              className="h-9 w-10 rounded-lg border border-input cursor-pointer p-0.5 bg-card"
-                            />
-                          )}
-                        />
-                        <Input {...register(name)} placeholder="#3b82f6" className="font-mono text-xs" />
-                      </div>
+              <div ref={(el) => { sectionRefs.current["theme"] = el; }}>
+                <SectionHeader icon={Palette} label="Theme & Fonts" />
+                <div className="space-y-4 mt-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <ColorField label="Primary Color" name="primary_color" control={control} register={register} />
+                    <ColorField label="Secondary Color" name="secondary_color" control={control} register={register} />
+                    <ColorField label="Accent Color" name="accent_color" control={control} register={register} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Body Font" hint="Used for body text">
+                      <Input {...register("font_primary")} placeholder="Inter" />
                     </Field>
-                  ))}
+                    <Field label="Heading Font" hint="Used for headings">
+                      <Input {...register("font_heading")} placeholder="Playfair Display" />
+                    </Field>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Primary Font">
-                    <Input {...register("font_primary")} placeholder="Inter" />
-                  </Field>
-                  <Field label="Heading Font">
-                    <Input {...register("font_heading")} placeholder="Playfair Display" />
-                  </Field>
-                </div>
-              </TabsContent>
+              </div>
+
+              <Divider />
 
               {/* Contact */}
-              <TabsContent value="contact" className="p-4 space-y-3 focus-visible:outline-none">
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Contact Email" error={errors.contact_email?.message}>
-                    <Input {...register("contact_email")} type="email" placeholder="info@modfirst.com" />
+              <div ref={(el) => { sectionRefs.current["contact"] = el; }}>
+                <SectionHeader icon={Phone} label="Contact" />
+                <div className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Contact Email" error={errors.contact_email?.message}>
+                      <Input {...register("contact_email")} type="email" placeholder="info@modfirst.com" />
+                    </Field>
+                    <Field label="Support Email" error={errors.support_email?.message}>
+                      <Input {...register("support_email")} type="email" placeholder="support@modfirst.com" />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Phone Number">
+                      <Input {...register("contact_phone")} placeholder="+923123456789" />
+                    </Field>
+                    <Field label="WhatsApp Number">
+                      <Input {...register("whatsapp_number")} placeholder="+923123456789" />
+                    </Field>
+                  </div>
+                  <Field label="Address">
+                    <Input {...register("address")} placeholder="123 Fashion Street, Karachi, Pakistan" />
                   </Field>
-                  <Field label="Support Email" error={errors.support_email?.message}>
-                    <Input {...register("support_email")} type="email" placeholder="support@modfirst.com" />
+                  <Field label="Business Hours">
+                    <Input {...register("business_hours")} placeholder="Mon–Sat: 9:00 AM – 7:00 PM" />
                   </Field>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Contact Phone">
-                    <Input {...register("contact_phone")} placeholder="+923123456789" />
-                  </Field>
-                  <Field label="WhatsApp Number">
-                    <Input {...register("whatsapp_number")} placeholder="+923123456789" />
-                  </Field>
-                </div>
-                <Field label="Address">
-                  <Input {...register("address")} placeholder="123 Fashion Street, Karachi" />
-                </Field>
-                <Field label="Business Hours">
-                  <Input {...register("business_hours")} placeholder="Mon-Sat: 9:00 AM - 7:00 PM" />
-                </Field>
-              </TabsContent>
+              </div>
+
+              <Divider />
 
               {/* Social */}
-              <TabsContent value="social" className="p-4 space-y-3 focus-visible:outline-none">
-                <Field label="Facebook URL">
-                  <Input {...register("facebook_url")} placeholder="https://facebook.com/modfirst" />
-                </Field>
-                <Field label="Instagram URL">
-                  <Input {...register("instagram_url")} placeholder="https://instagram.com/modfirst" />
-                </Field>
-              </TabsContent>
+              <div ref={(el) => { sectionRefs.current["social"] = el; }}>
+                <SectionHeader icon={Share2} label="Social Media" />
+                <div className="space-y-4 mt-4">
+                  <Field label="Facebook Page URL">
+                    <Input {...register("facebook_url")} placeholder="https://facebook.com/modfirst" />
+                  </Field>
+                  <Field label="Instagram Profile URL">
+                    <Input {...register("instagram_url")} placeholder="https://instagram.com/modfirst" />
+                  </Field>
+                </div>
+              </div>
+
+              <Divider />
 
               {/* Commerce */}
-              <TabsContent value="commerce" className="p-4 space-y-3 focus-visible:outline-none">
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Currency">
-                    <Input {...register("currency")} placeholder="PKR" />
-                  </Field>
-                  <Field label="Currency Symbol">
-                    <Input {...register("currency_symbol")} placeholder="₨" />
-                  </Field>
+              <div ref={(el) => { sectionRefs.current["commerce"] = el; }}>
+                <SectionHeader icon={ShoppingCart} label="Commerce" />
+                <div className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Currency Code" hint="ISO 4217 code (e.g. PKR, USD)">
+                      <Input {...register("currency")} placeholder="PKR" />
+                    </Field>
+                    <Field label="Currency Symbol">
+                      <Input {...register("currency_symbol")} placeholder="₨" />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Tax Rate (%)" hint="Applied at checkout">
+                      <Input
+                        type="number" step="0.01" min="0" max="100"
+                        {...register("tax_percentage", {
+                          setValueAs: (v) => (v === "" || v === null) ? null : Number(v),
+                        })}
+                        placeholder="18"
+                      />
+                    </Field>
+                    <Field label="Free Shipping Threshold" hint="Order total to qualify">
+                      <Input
+                        type="number" min="0"
+                        {...register("free_shipping_threshold", {
+                          setValueAs: (v) => (v === "" || v === null) ? null : Number(v),
+                        })}
+                        placeholder="5000"
+                      />
+                    </Field>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Tax Percentage (%)">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...register("tax_percentage", { valueAsNumber: true, setValueAs: (v) => v === "" ? null : Number(v) })}
-                      placeholder="18"
-                    />
-                  </Field>
-                  <Field label="Free Shipping Threshold">
-                    <Input
-                      type="number"
-                      {...register("free_shipping_threshold", { valueAsNumber: true, setValueAs: (v) => v === "" ? null : Number(v) })}
-                      placeholder="5000"
-                    />
-                  </Field>
-                </div>
-              </TabsContent>
+              </div>
+
+              <Divider />
 
               {/* SEO */}
-              <TabsContent value="seo" className="p-4 space-y-3 focus-visible:outline-none">
-                <Field label="Meta Title">
-                  <Input {...register("meta_title")} placeholder="ModFirst Apparel - Best Custom Clothing" />
-                </Field>
-                <Field label="Meta Description">
-                  <textarea
-                    {...register("meta_description")}
-                    placeholder="Shop premium quality clothes and custom designs..."
-                    rows={3}
-                    className="h-auto w-full min-w-0 rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all outline-none placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 disabled:opacity-50 dark:bg-input/20 resize-none"
-                  />
-                </Field>
-              </TabsContent>
-            </Tabs>
-          </div>
+              <div ref={(el) => { sectionRefs.current["seo"] = el; }}>
+                <SectionHeader icon={FileText} label="SEO" />
+                <div className="space-y-4 mt-4">
+                  <Field label="Meta Title" hint="Shown in browser tab and search results (50–60 chars)">
+                    <Input {...register("meta_title")} placeholder="ModFirst Apparel – Best Custom Clothing" />
+                  </Field>
+                  <Field label="Meta Description" hint="Search snippet description (120–160 chars)">
+                    <textarea
+                      {...register("meta_description")}
+                      rows={3}
+                      placeholder="Shop premium quality clothes and custom designs at ModFirst Apparel."
+                      className="w-full min-w-0 rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all outline-none placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 disabled:opacity-50 dark:bg-input/20 resize-none"
+                    />
+                  </Field>
+                </div>
+              </div>
 
-          <div className="flex justify-end gap-2 px-4 py-3 border-t border-border bg-muted/20 shrink-0">
+              {/* Bottom padding */}
+              <div className="h-2" />
+            </div>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/10 shrink-0">
+          <p className="text-[11px] text-muted-foreground">
+            {isEdit ? "Changes will update immediately after saving." : "All fields except Site Name are optional."}
+          </p>
+          <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={isPending}>
-              {isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{isEdit ? "Saving..." : "Creating..."}</> : isEdit ? "Save Changes" : "Create Setting"}
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isPending}
+              onClick={handleSubmit(onSubmit)}
+            >
+              {isPending
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{isEdit ? "Saving..." : "Creating..."}</>
+                : isEdit
+                  ? <><CheckCircle2 className="h-3.5 w-3.5" />Save Changes</>
+                  : <><Plus className="h-3.5 w-3.5" />Create Setting</>
+              }
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
+}
+
+function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+        <Icon className="h-3.5 w-3.5 text-primary" />
+      </div>
+      <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider">{label}</h3>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div className="h-px bg-border" />;
 }
 
 /* ══════════════════════════════════════
@@ -369,25 +511,30 @@ function SettingFormDialog({
 export default function WebsiteSettingsPage() {
   const { canCreate, canEdit } = usePermissions("website-settings");
   const { data, isLoading, isError, refetch, isFetching } = useWebsiteSettingsQuery();
-  const { addToast } = useToast();
 
   const [isOpenForm, setIsOpenForm] = useState(false);
   const [selected, setSelected] = useState<WebsiteSetting | null>(null);
 
+  const payload = data?.payload as WebsiteSetting[] | { data?: WebsiteSetting[] } | undefined;
   const settings: WebsiteSetting[] = (
-    Array.isArray(data?.payload) ? data.payload : (data?.payload as { data?: WebsiteSetting[] })?.data
+    Array.isArray(payload) ? payload : (payload as { data?: WebsiteSetting[] } | undefined)?.data
   ) ?? [];
 
   const columns = useMemo<ColumnDef<WebsiteSetting>[]>(() => [
     {
       accessorKey: "site_name",
-      header: "Site Name",
+      header: "Site",
       cell: ({ row }) => (
-        <div>
-          <p className="text-xs font-medium text-foreground">{row.original.site_name}</p>
-          {row.original.site_tagline && (
-            <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{row.original.site_tagline}</p>
-          )}
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-foreground">{row.original.site_name}</p>
+            {row.original.site_tagline && (
+              <p className="text-[10px] text-muted-foreground truncate max-w-[180px]">{row.original.site_tagline}</p>
+            )}
+          </div>
         </div>
       ),
     },
@@ -395,9 +542,10 @@ export default function WebsiteSettingsPage() {
       accessorKey: "contact_email",
       header: "Contact",
       cell: ({ row }) => (
-        <div className="text-[11px] text-muted-foreground">
+        <div className="text-[11px] text-muted-foreground space-y-0.5">
           {row.original.contact_email && <p>{row.original.contact_email}</p>}
           {row.original.contact_phone && <p>{row.original.contact_phone}</p>}
+          {!row.original.contact_email && !row.original.contact_phone && <span className="text-muted-foreground/40">—</span>}
         </div>
       ),
     },
@@ -405,30 +553,37 @@ export default function WebsiteSettingsPage() {
       accessorKey: "currency",
       header: "Currency",
       cell: ({ row }) => row.original.currency ? (
-        <span className="text-xs font-mono">
-          {row.original.currency_symbol} {row.original.currency}
-        </span>
-      ) : <span className="text-muted-foreground text-xs">—</span>,
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold text-foreground">{row.original.currency_symbol}</span>
+          <span className="text-xs font-mono text-muted-foreground">{row.original.currency}</span>
+        </div>
+      ) : <span className="text-muted-foreground/40 text-xs">—</span>,
     },
     {
       accessorKey: "primary_color",
-      header: "Colors",
-      cell: ({ row }) => (
-        <div className="flex gap-1">
-          {[row.original.primary_color, row.original.secondary_color, row.original.accent_color]
-            .filter(Boolean)
-            .map((c, i) => (
-              <span key={i} className="h-4 w-4 rounded-full border border-border/50 inline-block shrink-0" style={{ backgroundColor: c! }} title={c!} />
+      header: "Brand Colors",
+      cell: ({ row }) => {
+        const colors = [row.original.primary_color, row.original.secondary_color, row.original.accent_color].filter(Boolean);
+        return colors.length > 0 ? (
+          <div className="flex items-center gap-1.5">
+            {colors.map((c, i) => (
+              <span
+                key={i}
+                className="h-5 w-5 rounded-full border border-border/60 shadow-sm inline-block"
+                style={{ backgroundColor: c! }}
+                title={c!}
+              />
             ))}
-        </div>
-      ),
+          </div>
+        ) : <span className="text-muted-foreground/40 text-xs">—</span>;
+      },
     },
     {
       accessorKey: "is_active",
       header: "Status",
       cell: ({ row }) => row.original.is_active
         ? <Badge variant="outline" className="text-[10px] h-5 border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20">Active</Badge>
-        : <Badge variant="outline" className="text-[10px] h-5 border-muted text-muted-foreground">Inactive</Badge>,
+        : <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">Inactive</Badge>,
     },
     {
       id: "actions",
@@ -451,6 +606,7 @@ export default function WebsiteSettingsPage() {
         </div>
       ) : null,
     },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [canEdit]);
 
   return (
@@ -458,7 +614,7 @@ export default function WebsiteSettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
         <div>
           <h1 className="text-lg font-semibold text-foreground">Website Settings</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Manage site configuration, branding, and contact details</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage site branding, contact info, and commerce configuration</p>
         </div>
         {canCreate && (
           <Button size="sm" onClick={() => { setSelected(null); setIsOpenForm(true); }}>
@@ -493,7 +649,6 @@ export default function WebsiteSettingsPage() {
         open={isOpenForm}
         onOpenChange={setIsOpenForm}
         selected={selected}
-        onSuccess={() => { addToast(""); refetch(); }}
       />
     </div>
   );

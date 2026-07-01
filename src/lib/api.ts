@@ -1,9 +1,14 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
+// Frontend (public) API credentials — used for /frontend/* endpoints instead of Bearer token
+const FRONTEND_API_KEY = process.env.NEXT_PUBLIC_FRONTEND_API_KEY!;
+const FRONTEND_API_PASSWORD = process.env.NEXT_PUBLIC_FRONTEND_API_PASSWORD!;
+
 type RequestOptions = {
   method?: string;
   body?: unknown;
   token?: string;
+  frontend?: boolean; // use x-api-key / x-api-password instead of Bearer
 };
 
 export class ApiError extends Error {
@@ -19,14 +24,19 @@ export class ApiError extends Error {
 
 export async function apiRequest<T = unknown>(
   path: string,
-  { method = "GET", body, token }: RequestOptions = {}
+  { method = "GET", body, token, frontend = false }: RequestOptions = {}
 ): Promise<T> {
   const isFormData = body instanceof FormData;
   const headers: Record<string, string> = {};
 
-  // Don't set Content-Type for FormData — browser sets it with the multipart boundary
   if (!isFormData) headers["Content-Type"] = "application/json";
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  if (frontend) {
+    headers["x-api-key"] = FRONTEND_API_KEY;
+    headers["x-api-password"] = FRONTEND_API_PASSWORD;
+  } else if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${BASE_URL}/${path.replace(/^\//, "")}`, {
     method,

@@ -16,7 +16,7 @@ import {
 } from "@tanstack/react-table";
 import * as XLSX from "xlsx";
 import {
-  Search, Download, RefreshCw, Columns3, Loader2,
+  Search, Download, RefreshCw, Columns3,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

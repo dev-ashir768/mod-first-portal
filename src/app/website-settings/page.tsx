@@ -279,8 +279,7 @@ function SettingFormDialog({
     }
   };
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const isActive = watch("is_active");
+  const isActive = useWatch({ control, name: "is_active" });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

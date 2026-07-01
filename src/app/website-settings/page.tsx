@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -198,7 +198,7 @@ function SettingFormDialog({
   const isPending = createMutation.isPending || updateMutation.isPending;
   const [activeSection, setActiveSection] = useState<SectionId>("general");
 
-  const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onSubmit",
     reValidateMode: "onChange",
@@ -279,6 +279,7 @@ function SettingFormDialog({
     }
   };
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const isActive = watch("is_active");
 
   return (
@@ -653,7 +654,6 @@ export default function WebsiteSettingsPage() {
         </div>
       ) : null,
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [canEdit]);
 
   return (

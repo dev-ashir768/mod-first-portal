@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Settings, X, Sun, Moon, LogOut } from "lucide-react";
@@ -21,12 +21,10 @@ const ALL_NAV_ITEMS = [
 
 export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarProps) {
   const pathname = usePathname();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  );
   const allPerms = useAllPermissions();
-
-  useEffect(() => {
-    setIsDarkMode(document.documentElement.classList.contains("dark"));
-  }, []);
 
   const toggleDarkMode = () => {
     const next = !isDarkMode;

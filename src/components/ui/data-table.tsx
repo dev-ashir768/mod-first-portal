@@ -33,15 +33,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 /* ── Export helpers ── */
-function flattenRow(row: Record<string, unknown>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(row)) {
-    if (v === null || v === undefined) { out[k] = ""; continue; }
-    if (typeof v === "object") { out[k] = JSON.stringify(v); continue; }
-    out[k] = String(v);
-  }
-  return out;
-}
 
 function exportCSV<TData>(table: TanstackTable<TData>, filename: string) {
   const visibleCols = table.getVisibleLeafColumns().filter((c) => c.id !== "actions");
@@ -124,6 +115,7 @@ export function DataTable<TData, TValue = unknown>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

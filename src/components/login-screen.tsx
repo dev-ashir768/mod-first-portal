@@ -37,7 +37,7 @@ export function LoginScreen() {
   const verifyOtpMutation = useVerifyOtpMutation();
   const resendOtpMutation = useResendOtpMutation();
 
-  const { register, handleSubmit, formState: { errors }, getValues } = useForm<LoginFormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });

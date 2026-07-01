@@ -50,3 +50,40 @@ export function useResendOtpMutation() {
       apiRequest<ApiResponse<{ message: string }>>("auth/send-otp", { method: "POST", body }),
   });
 }
+
+/* ── Forgot Password: send OTP to email ── */
+export function useForgotPasswordMutation() {
+  return useMutation<ApiResponse<{ message: string }>, ApiError, { email: string }>({
+    mutationFn: (body) =>
+      apiRequest<ApiResponse<{ message: string }>>("auth/forgot-password", { method: "POST", body }),
+  });
+}
+
+/* ── Reset Password: email + otp + newPassword + confirmPassword ── */
+export function useResetPasswordMutation() {
+  return useMutation<
+    ApiResponse<{ message: string }>,
+    ApiError,
+    { email: string; otp: string; newPassword: string; confirmPassword: string }
+  >({
+    mutationFn: (body) =>
+      apiRequest<ApiResponse<{ message: string }>>("auth/reset-password", { method: "POST", body }),
+  });
+}
+
+/* ── Change Password (authenticated) ── */
+export function useChangePasswordMutation() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    ApiResponse<{ message: string }>,
+    ApiError,
+    { currentPassword: string; newPassword: string; confirmPassword: string }
+  >({
+    mutationFn: (body) =>
+      apiRequest<ApiResponse<{ message: string }>>("auth/change-password", {
+        method: "POST",
+        body,
+        token: token ?? undefined,
+      }),
+  });
+}

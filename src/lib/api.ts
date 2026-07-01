@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://13.62.114.94:3000/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 type RequestOptions = {
   method?: string;

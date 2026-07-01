@@ -540,7 +540,7 @@ function MenuRightsTab() {
 
   const onPermChange = (right: MenuRight, key: keyof Pick<MenuRight, "can_view" | "can_create" | "can_edit" | "can_delete">, value: boolean) => {
     updateMutation.mutate(
-      { id: right.id, data: { [key]: value } },
+      { id: right.id, data: { role: selectedRole, [key]: value } },
       { onError: (e) => addToast(e.message, "error", "Error") }
     );
   };

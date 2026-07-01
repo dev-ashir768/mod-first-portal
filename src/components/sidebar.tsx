@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Sun, Moon, LogOut } from "lucide-react";
+import { Menu, Settings, X, Sun, Moon, LogOut } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useAllPermissions } from "@/hooks/usePermissions";
 
@@ -16,6 +16,7 @@ interface SidebarProps {
 
 const ALL_NAV_ITEMS = [
   { name: "Menus", href: "/menus", icon: Menu, slug: "menus" },
+  { name: "Website Settings", href: "/website-settings", icon: Settings, slug: "website-settings" },
 ] as const;
 
 export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarProps) {

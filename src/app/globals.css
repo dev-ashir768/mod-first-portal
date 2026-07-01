@@ -55,23 +55,23 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0 0);
 
-  /* Shopify green: #008060 → oklch */
-  --primary: oklch(0.515 0.131 162.5);
-  --primary-foreground: oklch(1 0 0);
+  /* Lime-green primary (original) */
+  --primary: oklch(0.8567 0.2013 119.29);
+  --primary-foreground: oklch(0.13 0 0);
 
   --secondary: oklch(0.935 0 0);
   --secondary-foreground: oklch(0.25 0 0);
   --muted: oklch(0.942 0 0);
   --muted-foreground: oklch(0.48 0 0);   /* #6d7175 */
-  --accent: oklch(0.97 0.04 162.5);     /* very light tinted green */
-  --accent-foreground: oklch(0.515 0.131 162.5);
+  --accent: oklch(0.97 0.06 119.29);    /* very light tinted lime */
+  --accent-foreground: oklch(0.35 0.12 119.29);
 
   --destructive: oklch(0.549 0.228 27);
   --destructive-foreground: oklch(1 0 0);
 
   --border: oklch(0.877 0 0);            /* #e1e3e5 */
   --input: oklch(0.877 0 0);
-  --ring: oklch(0.515 0.131 162.5);
+  --ring: oklch(0.8567 0.2013 119.29);
 
   --radius: 0.5rem;                      /* 8px — Polaris uses 8px */
 
@@ -85,7 +85,7 @@
   --sidebar-border: oklch(0.25 0 0);
   --sidebar-ring: var(--primary);
 
-  --chart-1: oklch(0.515 0.131 162.5);
+  --chart-1: oklch(0.8567 0.2013 119.29);
   --chart-2: oklch(0.65 0.1 200);
   --chart-3: oklch(0.72 0.12 60);
   --chart-4: oklch(0.6 0.14 280);
@@ -99,14 +99,14 @@
   --card-foreground: oklch(0.96 0 0);
   --popover: oklch(0.19 0 0);
   --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.65 0.131 162.5);
-  --primary-foreground: oklch(0.1 0 0);
+  --primary: oklch(0.8567 0.2013 119.29);
+  --primary-foreground: oklch(0.13 0 0);
   --secondary: oklch(0.25 0 0);
   --secondary-foreground: oklch(0.96 0 0);
   --muted: oklch(0.25 0 0);
   --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.22 0.04 162.5);
-  --accent-foreground: oklch(0.65 0.131 162.5);
+  --accent: oklch(0.22 0.05 119.29);
+  --accent-foreground: oklch(0.8567 0.2013 119.29);
   --destructive: oklch(0.65 0.22 27);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(1 0 0 / 10%);

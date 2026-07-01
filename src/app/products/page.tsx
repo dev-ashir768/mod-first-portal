@@ -22,8 +22,10 @@ import { Label } from "@/components/ui/label";
 import { ReactSelect } from "@/components/ui/react-select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FileUpload } from "@/components/ui/file-upload";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const statusMap = {
   active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/50",
@@ -32,6 +34,7 @@ const statusMap = {
 };
 
 export default function ProductsPage() {
+  const { canCreate, canEdit, canDelete } = usePermissions("products");
   const { data: products = [], isLoading } = useProducts();
   const addMutation = useAddProduct();
   const updateMutation = useUpdateProduct();
@@ -131,9 +134,9 @@ export default function ProductsPage() {
     {
       accessorKey: "name",
       header: ({ column }) => (
-        <button onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="flex items-center gap-1 hover:text-foreground font-medium">
+        <Button variant="ghost" size="sm" className="h-auto p-0 font-medium text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Name <ArrowUpDown className="h-3 w-3" />
-        </button>
+        </Button>
       ),
       cell: ({ row }) => (
         <div className="max-w-[180px]">
@@ -159,18 +162,18 @@ export default function ProductsPage() {
     {
       accessorKey: "price",
       header: ({ column }) => (
-        <button onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="flex items-center gap-1 hover:text-foreground font-medium">
+        <Button variant="ghost" size="sm" className="h-auto p-0 font-medium text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Price <ArrowUpDown className="h-3 w-3" />
-        </button>
+        </Button>
       ),
       cell: ({ row }) => <span className="text-sm font-semibold">${parseFloat(row.getValue("price")).toFixed(2)}</span>
     },
     {
       accessorKey: "stock",
       header: ({ column }) => (
-        <button onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="flex items-center gap-1 hover:text-foreground font-medium">
+        <Button variant="ghost" size="sm" className="h-auto p-0 font-medium text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Stock <ArrowUpDown className="h-3 w-3" />
-        </button>
+        </Button>
       ),
       cell: ({ row }) => {
         const stock = row.original.stock;
@@ -197,35 +200,32 @@ export default function ProductsPage() {
       cell: ({ row }) => (
         <TooltipProvider delayDuration={300}>
           <div className="flex items-center justify-end gap-0.5 pr-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => handleOpenEdit(row.original)}
-                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Edit product</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => handleOpenDelete(row.original)}
-                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Delete product</TooltipContent>
-            </Tooltip>
+            {canEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" onClick={() => handleOpenEdit(row.original)} className="text-muted-foreground hover:bg-blue-50 hover:text-blue-600">
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Edit product</TooltipContent>
+              </Tooltip>
+            )}
+            {canDelete && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" onClick={() => handleOpenDelete(row.original)} className="text-muted-foreground hover:bg-rose-50 hover:text-rose-600">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Delete product</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </TooltipProvider>
       ),
       enableSorting: false
     }
-  ], [handleOpenEdit, handleOpenDelete]);
+  ], [handleOpenEdit, handleOpenDelete, canEdit, canDelete]);
 
   const exportToCSV = () => {
     const headers = ["ID", "Name", "SKU", "Category", "Price", "Stock", "Status"];
@@ -276,9 +276,11 @@ export default function ProductsPage() {
           <h1 className="text-lg font-semibold text-foreground">Products</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Manage pricing, stock levels, and status</p>
         </div>
-        <Button onClick={handleOpenAdd} size="sm" className="gap-1.5 shrink-0">
-          <Plus className="h-3.5 w-3.5" /> Add Product
-        </Button>
+        {canCreate && (
+          <Button onClick={handleOpenAdd} size="sm" className="gap-1.5 shrink-0">
+            <Plus className="h-3.5 w-3.5" /> Add Product
+          </Button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -333,63 +335,63 @@ export default function ProductsPage() {
                 <p className="text-xs mt-0.5">Try relaxing your filters.</p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead>
+              <Table>
+                <TableHeader>
                   {table.getHeaderGroups().map((hg) => (
                     <React.Fragment key={hg.id}>
-                      <tr className="border-b border-border bg-muted/40 text-muted-foreground">
+                      <TableRow className="bg-muted/40 hover:bg-muted/40">
                         {hg.headers.map((header) => (
-                          <th key={header.id} className="px-3 py-2.5 text-xs font-medium first:pl-4 last:pr-4 select-none">
+                          <TableHead key={header.id} className="px-3 text-xs font-medium text-muted-foreground select-none">
                             {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                          </th>
+                          </TableHead>
                         ))}
-                      </tr>
+                      </TableRow>
                       {showColumnFilters && (
-                        <tr className="border-b border-border bg-muted/20">
+                        <TableRow className="bg-muted/20 hover:bg-muted/20">
                           {hg.headers.map((header) => {
                             const colId = header.column.id;
                             return (
-                              <th key={`f-${colId}`} className="px-3 py-1.5 first:pl-4 last:pr-4">
+                              <TableHead key={`f-${colId}`} className="px-3 py-1.5">
                                 {colId === "image" || colId === "actions" ? null : colId === "category" || colId === "status" ? (
-                                  <select
-                                    value={(header.column.getFilterValue() as string) ?? ""}
-                                    onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
-                                    className="h-7 w-full text-xs bg-card border border-border rounded px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                  >
-                                    <option value="">All</option>
-                                    {colId === "category"
-                                      ? categories.map((c) => <option key={c} value={c}>{c}</option>)
-                                      : ["active", "draft", "archived"].map((s) => <option key={s} value={s}>{s}</option>)
-                                    }
-                                  </select>
+                                  <ReactSelect
+                                    options={[
+                                      { value: "", label: "All" },
+                                      ...(colId === "category"
+                                        ? categories.map((c) => ({ value: c, label: c }))
+                                        : ["active", "draft", "archived"].map((s) => ({ value: s, label: s })))
+                                    ]}
+                                    value={{ value: (header.column.getFilterValue() as string) ?? "", label: (header.column.getFilterValue() as string) || "All" }}
+                                    onChange={(opt) => header.column.setFilterValue((opt as { value: string })?.value || undefined)}
+                                    isSearchable={false}
+                                  />
                                 ) : (
                                   <Input
-                                    placeholder={`Filter...`}
+                                    placeholder="Filter..."
                                     value={(header.column.getFilterValue() as string) ?? ""}
                                     onChange={(e) => header.column.setFilterValue(e.target.value)}
                                     className="h-7 text-xs"
                                   />
                                 )}
-                              </th>
+                              </TableHead>
                             );
                           })}
-                        </tr>
+                        </TableRow>
                       )}
                     </React.Fragment>
                   ))}
-                </thead>
-                <tbody className="divide-y divide-border">
+                </TableHeader>
+                <TableBody>
                   {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                    <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-3 py-2.5 first:pl-4 last:pr-4 align-middle">
+                        <TableCell key={cell.id} className="px-3 py-2.5">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
+                        </TableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
           </div>
 

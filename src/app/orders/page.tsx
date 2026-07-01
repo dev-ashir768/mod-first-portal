@@ -5,16 +5,22 @@ import { useOrders, useUpdateOrderStatus, useSettings } from "@/hooks/useMockDat
 import { Order } from "@/store/useStore";
 import { useToast } from "@/store/useToast";
 import {
+  useReactTable, getCoreRowModel, ColumnDef, flexRender
+} from "@tanstack/react-table";
+import {
   Search, Eye, ShoppingCart, Calendar, User, Mail,
   Loader2, Clock, CheckCircle2, XCircle, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ReactSelect } from "@/components/ui/react-select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type FilterStatus = "all" | Order["status"];
 
@@ -33,6 +39,7 @@ const statusIcons = {
 };
 
 export default function OrdersPage() {
+  const { canView, canEdit } = usePermissions("orders");
   const { data: orders = [], isLoading } = useOrders();
   const { data: settings } = useSettings();
   const updateStatusMutation = useUpdateOrderStatus();
@@ -77,6 +84,81 @@ export default function OrdersPage() {
     new Intl.NumberFormat("en-US", { style: "currency", currency: settings?.currency || "USD" }).format(val);
 
   const taxRate = settings?.taxRate || 8.25;
+
+  const columns = useMemo<ColumnDef<Order>[]>(() => [
+    {
+      accessorKey: "id",
+      header: "Order",
+      cell: ({ row }) => <span className="font-mono text-xs text-blue-600">{row.original.id}</span>
+    },
+    {
+      accessorKey: "customerName",
+      header: "Customer",
+      cell: ({ row }) => (
+        <div>
+          <div className="text-sm font-medium text-foreground">{row.original.customerName}</div>
+          <div className="text-xs text-muted-foreground">{row.original.customerEmail}</div>
+        </div>
+      )
+    },
+    {
+      id: "items",
+      header: "Items",
+      cell: ({ row }) => {
+        const qtySum = row.original.items.reduce((sum, item) => sum + item.quantity, 0);
+        return <span className="text-xs text-muted-foreground">{qtySum} item{qtySum !== 1 ? "s" : ""}</span>;
+      }
+    },
+    {
+      accessorKey: "totalAmount",
+      header: "Total",
+      cell: ({ row }) => <span className="text-sm font-semibold text-foreground">{formatCurrency(row.original.totalAmount)}</span>
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Date",
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">
+          {new Date(row.original.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        </span>
+      )
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${statusColors[row.original.status]}`}>
+          {statusIcons[row.original.status]}
+          <span className="capitalize">{row.original.status}</span>
+        </span>
+      )
+    },
+    {
+      id: "actions",
+      header: () => <span className="text-right block">Action</span>,
+      cell: ({ row }) => canView ? (
+        <div className="flex justify-end">
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:bg-blue-50 hover:text-blue-600" onClick={() => handleOpenDetails(row.original)}>
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">View order</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      ) : null
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [canView, formatCurrency]);
+
+  const table = useReactTable({
+    data: filteredOrders,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
   const orderDetailsBreakdown = useMemo(() => {
     if (!selectedOrder) return { subtotal: 0, tax: 0, total: 0 };
     const subtotal = selectedOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -95,21 +177,19 @@ export default function OrdersPage() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex gap-0.5 border-b border-border">
-        {(["all", "pending", "processing", "completed", "cancelled"] as FilterStatus[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3 py-2 text-xs font-medium capitalize transition-colors border-b-2 -mb-px ${
-              activeTab === tab
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FilterStatus)}>
+        <TabsList className="bg-transparent border-b border-border rounded-none h-auto p-0 gap-0.5">
+          {(["all", "pending", "processing", "completed", "cancelled"] as FilterStatus[]).map((tab) => (
+            <TabsTrigger
+              key={tab}
+              value={tab}
+              className="px-3 py-2 text-xs font-medium capitalize rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent text-muted-foreground"
+            >
+              {tab}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* Search */}
       <div className="relative max-w-sm">
@@ -140,59 +220,30 @@ export default function OrdersPage() {
                 <p className="text-xs mt-0.5">Try a different filter or search term.</p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40 text-muted-foreground">
-                    <th className="px-4 py-2.5 text-xs font-medium">Order</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Customer</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Items</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Total</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Date</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Status</th>
-                    <th className="px-4 py-2.5 text-xs font-medium text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredOrders.map((order) => {
-                    const qtySum = order.items.reduce((sum, item) => sum + item.quantity, 0);
-                    return (
-                      <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-2.5 font-mono text-xs text-blue-600">{order.id}</td>
-                        <td className="px-3 py-2.5">
-                          <div className="text-sm font-medium text-foreground">{order.customerName}</div>
-                          <div className="text-xs text-muted-foreground">{order.customerEmail}</div>
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-muted-foreground">{qtySum} item{qtySum !== 1 ? "s" : ""}</td>
-                        <td className="px-3 py-2.5 text-sm font-semibold text-foreground">{formatCurrency(order.totalAmount)}</td>
-                        <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                          {new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${statusColors[order.status]}`}>
-                            {statusIcons[order.status]}
-                            <span className="capitalize">{order.status}</span>
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <TooltipProvider delayDuration={300}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  onClick={() => handleOpenDetails(order)}
-                                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">View order</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((hg) => (
+                    <TableRow key={hg.id} className="bg-muted/40 hover:bg-muted/40">
+                      {hg.headers.map((header) => (
+                        <TableHead key={header.id} className="px-3 text-xs font-medium text-muted-foreground">
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="px-3 py-2.5">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </CardContent>
@@ -264,29 +315,31 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Status update */}
-            <div className="p-3 border border-border rounded-md space-y-2">
-              <Label htmlFor="order-status" className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Update Status
-              </Label>
-              <div className="flex items-center gap-2 mt-1">
-                <ReactSelect
-                  className="flex-1"
-                  options={[
-                    { value: "pending", label: "Pending" },
-                    { value: "processing", label: "Processing" },
-                    { value: "completed", label: "Completed" },
-                    { value: "cancelled", label: "Cancelled" },
-                  ]}
-                  value={selectedOrder ? { value: selectedOrder.status, label: selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1) } : null}
-                  onChange={(opt) => { if (opt) handleStatusChange((opt as { value: string }).value as Order["status"]); }}
-                  isDisabled={updateStatusMutation.isPending}
-                  isSearchable={false}
-                  inputId="order-status"
-                />
-                {updateStatusMutation.isPending && <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />}
+            {/* Status update — only for users with edit permission */}
+            {canEdit && (
+              <div className="p-3 border border-border rounded-md space-y-2">
+                <Label htmlFor="order-status" className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                  Update Status
+                </Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <ReactSelect
+                    className="flex-1"
+                    options={[
+                      { value: "pending", label: "Pending" },
+                      { value: "processing", label: "Processing" },
+                      { value: "completed", label: "Completed" },
+                      { value: "cancelled", label: "Cancelled" },
+                    ]}
+                    value={selectedOrder ? { value: selectedOrder.status, label: selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1) } : null}
+                    onChange={(opt) => { if (opt) handleStatusChange((opt as { value: string }).value as Order["status"]); }}
+                    isDisabled={updateStatusMutation.isPending}
+                    isSearchable={false}
+                    inputId="order-status"
+                  />
+                  {updateStatusMutation.isPending && <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="px-4 py-3 border-t border-border bg-muted/20 flex justify-end">

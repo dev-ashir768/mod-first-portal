@@ -2,15 +2,18 @@
 
 import React, { useState, useMemo } from "react";
 import { useCustomers, useSettings } from "@/hooks/useMockData";
+import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, ColumnDef, flexRender, SortingState } from "@tanstack/react-table";
 import { Search, Users, Calendar, Mail, Loader2, DollarSign, Award, Sparkles, ShoppingBag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export default function CustomersPage() {
   const { data: customers = [], isLoading } = useCustomers();
   const { data: settings } = useSettings();
   const [searchQuery, setSearchQuery] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(
@@ -35,6 +38,86 @@ export default function CustomersPage() {
     if (!customers.length) return null;
     return [...customers].sort((a, b) => b.totalSpent - a.totalSpent)[0];
   }, [customers]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: "name",
+      header: "Customer",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold text-[10px] flex items-center justify-center select-none shrink-0">
+            {getInitials(row.original.name)}
+          </div>
+          <span className="text-sm font-medium text-foreground">{row.original.name}</span>
+        </div>
+      )
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Mail className="h-3 w-3 shrink-0" />{row.original.email}
+        </div>
+      )
+    },
+    {
+      accessorKey: "ordersCount",
+      header: "Orders",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <ShoppingBag className="h-3 w-3 shrink-0" />{row.original.ordersCount}
+        </div>
+      )
+    },
+    {
+      accessorKey: "totalSpent",
+      header: "Total Spent",
+      cell: ({ row }) => <span className="text-sm font-semibold text-foreground">{formatCurrency(row.original.totalSpent)}</span>
+    },
+    {
+      accessorKey: "joinedDate",
+      header: "Member Since",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Calendar className="h-3 w-3 shrink-0" />
+          {new Date(row.original.joinedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        </div>
+      )
+    },
+    {
+      id: "segment",
+      header: () => <span className="text-right block">Segment</span>,
+      cell: ({ row }) => {
+        const isLoyal = row.original.totalSpent >= 250;
+        return (
+          <div className="text-right">
+            {isLoyal ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-200/40">
+                <Sparkles className="h-2.5 w-2.5" />VIP
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                Shopper
+              </span>
+            )}
+          </div>
+        );
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [formatCurrency]);
+
+  const table = useReactTable({
+    data: filteredCustomers,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
 
   return (
     <div className="space-y-4">
@@ -130,63 +213,30 @@ export default function CustomersPage() {
                 <p className="text-sm font-medium text-foreground">No customers found</p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40 text-muted-foreground">
-                    <th className="px-4 py-2.5 text-xs font-medium">Customer</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Email</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Orders</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Total Spent</th>
-                    <th className="px-3 py-2.5 text-xs font-medium">Member Since</th>
-                    <th className="px-4 py-2.5 text-xs font-medium text-right">Segment</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredCustomers.map((c) => {
-                    const isLoyal = c.totalSpent >= 250;
-                    return (
-                      <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold text-[10px] flex items-center justify-center select-none shrink-0">
-                              {getInitials(c.name)}
-                            </div>
-                            <span className="text-sm font-medium text-foreground">{c.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3 shrink-0" />{c.email}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <ShoppingBag className="h-3 w-3 shrink-0" />{c.ordersCount}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5 text-sm font-semibold text-foreground">{formatCurrency(c.totalSpent)}</td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3 shrink-0" />
-                            {new Date(c.joinedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          {isLoyal ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-200/40">
-                              <Sparkles className="h-2.5 w-2.5" />VIP
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
-                              Shopper
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((hg) => (
+                    <TableRow key={hg.id} className="bg-muted/40 hover:bg-muted/40">
+                      {hg.headers.map((header) => (
+                        <TableHead key={header.id} className="px-3 text-xs font-medium text-muted-foreground">
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="px-3 py-2.5">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </CardContent>

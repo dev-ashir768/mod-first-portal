@@ -15,13 +15,36 @@ export interface AuthUser {
   is_locked: boolean;
 }
 
+export interface MenuRightMenu {
+  id: number;
+  name: string;
+  slug: string;
+  menu_type: string;
+  link_value: string | null;
+  link_type: string;
+  icon: string | null;
+  is_active: boolean;
+}
+
+export interface StoredMenuRight {
+  id: number;
+  menu_id: number;
+  role: string;
+  can_view: boolean;
+  can_create: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  menu: MenuRightMenu;
+}
+
 interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  menuRights: StoredMenuRight[];
 
-  setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  setAuth: (user: AuthUser, accessToken: string, refreshToken: string, menuRights?: StoredMenuRight[]) => void;
   updateUser: (patch: Partial<AuthUser>) => void;
   clearAuth: () => void;
 }
@@ -33,9 +56,10 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      menuRights: [],
 
-      setAuth: (user, accessToken, refreshToken) =>
-        set({ user, accessToken, refreshToken, isAuthenticated: true }),
+      setAuth: (user, accessToken, refreshToken, menuRights = []) =>
+        set({ user, accessToken, refreshToken, isAuthenticated: true, menuRights }),
 
       updateUser: (patch) => {
         const current = get().user;
@@ -43,7 +67,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearAuth: () =>
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, menuRights: [] }),
     }),
     {
       name: "modfirst-auth",
@@ -52,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        menuRights: state.menuRights,
       }),
     }
   )

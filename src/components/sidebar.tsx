@@ -9,12 +9,14 @@ import {
   ShoppingCart,
   Users,
   Settings,
+  Menu,
   X,
   Sun,
   Moon,
-  LogOut
+  LogOut,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useAllPermissions } from "@/hooks/usePermissions";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -23,9 +25,19 @@ interface SidebarProps {
   setIsMobileOpen: (open: boolean) => void;
 }
 
+const ALL_NAV_ITEMS = [
+  { name: "Dashboard", href: "/",         icon: LayoutDashboard, slug: "dashboard" },
+  { name: "Products",  href: "/products",  icon: Package,         slug: "products"  },
+  { name: "Orders",    href: "/orders",    icon: ShoppingCart,    slug: "orders"    },
+  { name: "Customers", href: "/customers", icon: Users,           slug: "customers" },
+  { name: "Menus",     href: "/menus",     icon: Menu,            slug: "menus"     },
+  { name: "Settings",  href: "/settings",  icon: Settings,        slug: "settings"  },
+] as const;
+
 export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarProps) {
   const pathname = usePathname();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const allPerms = useAllPermissions();
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -44,13 +56,14 @@ export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarP
     }
   };
 
-  const navItems = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Products", href: "/products", icon: Package },
-    { name: "Orders", href: "/orders", icon: ShoppingCart },
-    { name: "Customers", href: "/customers", icon: Users },
-    { name: "Settings", href: "/settings", icon: Settings },
-  ];
+  // Filter items where canView is true.
+  // If allPerms is empty (super_admin or no rights configured) → show everything.
+  const navItems = ALL_NAV_ITEMS.filter((item) => {
+    if (allPerms.size === 0) return true; // super_admin or unconfigured
+    const perm = allPerms.get(item.slug);
+    if (!perm) return true; // no rule for this slug → show by default
+    return perm.canView;
+  });
 
   const collapsed = isCollapsed && !isMobileOpen;
 
@@ -61,11 +74,7 @@ export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarP
         <Link href="/" className="flex items-center select-none shrink-0">
           <div className={`overflow-hidden transition-all duration-200 shrink-0 ${collapsed ? "w-5" : "w-[136px]"}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/logo-dark.svg"
-              alt="ModFirst"
-              className="h-6 w-auto max-w-none"
-            />
+            <img src="/images/logo-dark.svg" alt="ModFirst" className="h-6 w-auto max-w-none" />
           </div>
         </Link>
         {isMobileOpen && (
@@ -80,14 +89,13 @@ export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarP
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden">
-        {/* Section label */}
         {!collapsed && (
           <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground select-none">
             Menu
           </p>
         )}
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           const Icon = item.icon;
 
           return (
@@ -113,7 +121,7 @@ export function Sidebar({ isCollapsed, isMobileOpen, setIsMobileOpen }: SidebarP
                 {item.name}
               </span>
 
-              {/* Active indicator bar */}
+              {/* Active indicator */}
               {isActive && (
                 <span className="absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-primary" />
               )}

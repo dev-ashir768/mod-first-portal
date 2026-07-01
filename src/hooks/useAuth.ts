@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, ApiError } from "@/lib/api";
-import { useAuthStore, AuthUser } from "@/store/useAuthStore";
+import { useAuthStore, AuthUser, StoredMenuRight } from "@/store/useAuthStore";
 
 /* ── Types ── */
 interface LoginPayload {
@@ -9,7 +9,7 @@ interface LoginPayload {
 
 interface VerifyOtpPayload {
   user: AuthUser;
-  menuRights: unknown[];
+  menuRights: StoredMenuRight[];
   accessToken: string;
   refreshToken: string;
 }
@@ -37,8 +37,8 @@ export function useVerifyOtpMutation() {
     mutationFn: (body) =>
       apiRequest<ApiResponse<VerifyOtpPayload>>("auth/verify-otp", { method: "POST", body }),
     onSuccess: (data) => {
-      const { user, accessToken, refreshToken } = data.payload;
-      setAuth(user, accessToken, refreshToken);
+      const { user, accessToken, refreshToken, menuRights } = data.payload;
+      setAuth(user, accessToken, refreshToken, menuRights ?? []);
     },
   });
 }

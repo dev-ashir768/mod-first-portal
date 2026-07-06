@@ -204,7 +204,7 @@ function ItemForm({
 
       {/* Accordion body */}
       {isOpen && (
-        <form onSubmit={handleSubmit(onSave)} className="border-t border-border p-3 space-y-3 bg-muted/10">
+        <div className="border-t border-border p-3 space-y-3 bg-muted/10">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Title" error={errors.title?.message}>
               <Input {...register("title")} placeholder="Summer Collection" />
@@ -280,12 +280,12 @@ function ItemForm({
                 )}
               />
             </div>
-            <Button type="submit" size="xs" disabled={isPending}>
+            <Button type="button" size="xs" disabled={isPending} onClick={() => handleSubmit(onSave)()}>
               {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
               {isNew ? "Add Item" : "Save Item"}
             </Button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );
@@ -756,7 +756,7 @@ function Divider() {
 ══════════════════════════════════════ */
 export default function HomeSectionsPage() {
   const { canCreate, canEdit, canDelete } = usePermissions("home-sections");
-  const { data, isLoading, isError, refetch, isFetching } = useHomeSectionsQuery();
+  const { data, isLoading, isError, error, refetch, isFetching } = useHomeSectionsQuery();
   const { addToast } = useToast();
 
   const [isOpenForm, setIsOpenForm] = useState(false);
@@ -893,7 +893,9 @@ export default function HomeSectionsPage() {
       {isError && (
         <div className="flex flex-col items-center py-12 text-muted-foreground gap-2">
           <AlertTriangle className="h-8 w-8 text-amber-400" />
-          <p className="text-sm">Failed to load home sections.</p>
+          <p className="text-sm font-medium">Failed to load sections.</p>
+          {error && <p className="text-xs text-rose-500">{error.message}</p>}
+          <Button size="sm" variant="outline" onClick={() => refetch()} className="mt-1">Retry</Button>
         </div>
       )}
 

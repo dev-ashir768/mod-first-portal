@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 /* ── Export helpers ── */
@@ -310,15 +311,16 @@ export function DataTable<TData, TValue = unknown>({
             </span>
             <div className="flex items-center gap-1.5 border-l border-border pl-3">
               <span>Rows</span>
-              <select
-                value={pageSize}
-                onChange={(e) => table.setPageSize(Number(e.target.value))}
-                className="h-6 bg-card border border-border rounded px-1.5 text-foreground focus:outline-none text-xs cursor-pointer"
-              >
-                {[5, 10, 20, 50, 100].map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+              <Select value={String(pageSize)} onValueChange={(v) => table.setPageSize(Number(v))}>
+                <SelectTrigger className="h-7 w-16 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 10, 20, 50, 100].map((s) => (
+                    <SelectItem key={s} value={String(s)} className="text-xs">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
